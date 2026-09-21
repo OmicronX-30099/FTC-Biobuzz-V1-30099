@@ -1,4 +1,18 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+        maven {
+            url "https://repo.dairy.foundation/releases"
+        }
+    }
+    dependencies {
+        classpath "dev.frozenmilk:Load:0.3.2"
+    }
+}
+
 apply plugin: 'com.android.application'
+apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 
 //
 // build.gradle in TeamCode
@@ -12,6 +26,10 @@ apply plugin: 'com.android.application'
 
 // Custom definitions may go here
 
+/* FROM DAN: if you decide to add new plugins please put in a list here:
+Sloth
+
+*/
 // Include common definitions from above.
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
@@ -24,6 +42,14 @@ android {
     }
 }
 
+repositories {
+    maven {
+        url = "https://repo.dairy.foundation/releases"
+    }
+}
+
 dependencies {
+    implementation("com.bylazar.sloth:fullpanels:0.3.2+1.0.13")
+    implementation("com.acmerobotics.slothboard:dashboard:0.3.2+0.6.0")
     implementation project(':FtcRobotController')
 }
