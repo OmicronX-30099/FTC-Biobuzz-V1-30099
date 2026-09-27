@@ -1,3 +1,9 @@
+## from Dan: 
+this is where OPModes are located, if you are achintya or maximus
+please document here
+## Opmodes:
+
+
 ## TeamCode Module
 
 Welcome!

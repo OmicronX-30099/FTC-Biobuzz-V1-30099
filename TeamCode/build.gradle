@@ -33,6 +33,9 @@ apply plugin: 'com.android.application'
 apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
+apply from: '../build.common.gradle'
+apply from: '../build.dependencies.gradle'
+apply plugin: 'kotlin-android'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
