@@ -1,3 +1,85 @@
+## Team 30099 development setup
+
+The `v1-beta` branch follows [Pedro Pathing Quickstart](https://github.com/Pedro-Pathing/Quickstart)
+at commit `2df96463753dba59271df3f71c1619fb5f9da65a`. Its Pedro sources are in
+`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/pedro`, including the
+`procedures` tuning classes. The Android modules compile against SDK 34, as in
+Quickstart. FTC SDK dependencies remain at 12.0.0.
+
+The shared `build.dependencies.gradle` includes:
+
+- Pedro Pathing REV Hub integration 3.0.1 (includes Pedro core) and tuning 1.0.1.
+- Ivy's Pedro integration 1.1.1 (includes the command framework).
+- Dairy Sloth 0.3.2.
+- FTC Dashboard via Dairy's Slothboard 0.3.2+0.6.0. This preserves the
+  `com.acmerobotics.dashboard` imports and supports Sloth hot reload. Do not add
+  the original Dashboard artifact alongside it, since they contain the same classes.
+
+Sync Gradle in Android Studio, then build with `./gradlew.bat :TeamCode:assembleDebug`.
+Quickstart's `Constants.create()` returns `null` and `Tuning` is an empty template;
+configure the robot's drivetrain, localizer, follower, and tuning entry point before use.
+
+The Sloth Load plugin is installed in `TeamCode/build.gradle`. Perform a full
+Android Studio installation to the robot first. After that, run
+`./gradlew.bat :TeamCode:deploySloth` to hot reload TeamCode on an ADB-connected robot.
+Before a subsequent full installation, run `./gradlew.bat :TeamCode:removeSlothRemote`
+(or add it as the first "Before launch" Gradle task in Android Studio's TeamCode
+run configuration). Changes to libraries or other files outside hot-reloaded
+TeamCode require a full installation. See [Sloth's setup instructions](https://github.com/Dairy-Foundation/Sloth#installation).
+
+### Shooter test
+
+`Shooter Test` (Tests group) uses one encoder-equipped flywheel motor named
+`shooter` and one positional hood servo named `hood`. Change `MOTOR_NAME` and
+`HOOD_NAME` in Dashboard's `ShooterTest` configuration before INIT if your robot
+uses different names. This test follows the direct `init()`/`loop()` structure of
+[16010-Worlds' testing OpModes](https://github.com/BaronClaps/16010-Worlds/tree/7ba5437c9a6f1892af06132384047ef8490efe1d/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/test).
+
+Press INIT, then START. In Dashboard, save changes to `HOOD_POSITION` (0–1)
+to command the hood live. Shooter Test always uses software velocity control;
+there is no mode selector or flywheel enable toggle. The separate
+`Shooter Motor Power Test` OpMode provides direct motor-power testing.
+
+Set `TARGET_VELOCITY_TPS` (defaults to 1500 ticks/s) and tune `kP`, `kS`, and `kV`
+live. The calculation is ported from [FTC-Decode-v3's Flywheel.calculatePow()](https://github.com/OmicronX-30099/FTC-Decode-v3/blob/f68882b17f6c3be14384867a75702066da4f1bb2/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Systems/Shooter/ShooterUtil.kt):
+
+`power = clip(kP * (targetTPS - measuredTPS) + kV * targetTPS + kS * sign(targetTPS), 0, 1)`
+
+Starting gains are `kP = 0.003`, `kS = 0.09`, and `kV = 0.0004`, as in last
+season's controller. INIT preserves these Dashboard settings. These gains are in
+motor-power units and differ from REV Hub PIDF gains. `RUN_WITHOUT_ENCODER`
+allows direct `setPower()` output while `getVelocity()` still reads the encoder.
+A connected encoder is required. The controller lives in
+`control/ShooterVelocityController.java`, with no NextFTC dependency, and can be
+called from an Ivy-controlled subsystem's periodic update. It clamps output to
+0–1, coasts rather than reverses when overspeeding, and outputs zero for targets
+whose magnitude is below 1 TPS. Set the target to `0` to stop. Retune these
+starting gains for this season's single motor and flywheel.
+
+Driver Station and Dashboard telemetry show `Shooter Test v6`, current/target
+velocity in ticks/s, velocity error, output power, gains, motor current, hood
+command, and hardware enable states. The hood's
+commanded position is not physical feedback. INIT telemetry identifies the
+connected hardware ports. STOP sets motor power to zero. Record tuned gains for
+use in competition code.
+
+Shot recovery telemetry arms after velocity stays within `RECOVERY_TOLERANCE_TPS`
+(default ±50 TPS) of the target for `RECOVERY_SETTLE_MS` (default 100 ms). It starts
+timing at the first sample at least `SHOT_DROP_TPS` (default 100 TPS) below target,
+then finishes after velocity stays in the target band for another 100 ms. At a
+1500 TPS target, a dip to 1400 TPS or below starts timing and 1450–1550 TPS is the
+recovery band. `Last recovery (ms)` includes the settling period and remains visible
+until the next recovery completes. `Recovery elapsed (ms)` shows an active timer;
+`Completed recoveries` and `Last velocity drop (ticks/s)` provide context.
+
+These three thresholds are live Dashboard controls; the drop threshold must be
+greater than the tolerance. Initial spin-up is excluded. Changing the target or
+thresholds clears the measurements and requires rearming. With no ball sensor,
+any qualifying velocity disturbance can trigger the timer. Shots fired before
+the flywheel settles again are measured as one combined recovery. Timing is
+limited by encoder/OpMode sampling and measures from detected velocity drop,
+rather than the exact instant the ball is launched.
+
 ## NOTICE
 
 This repository contains the public FTC SDK for the BIOBUZZ (2026-2027) competition season.
