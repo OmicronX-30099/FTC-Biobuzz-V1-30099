@@ -6,6 +6,9 @@ import com.pedropathing.ivy.groups.Groups.sequential
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
+import org.firstinspires.ftc.teamcode.Subsystem.Rollers.busyShooting
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 
 /**
@@ -18,6 +21,8 @@ import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
  * 4.get turret done quickly
  */
 object Shooter {
+    val gate: Servo = hardwareMap.get(Servo::class.java, "gate")
+    var gateOpen: Boolean = false
 
 
     val hood: Servo = hardwareMap.get(Servo::class.java, "hood")
@@ -25,8 +30,20 @@ object Shooter {
     var shooterPow: Double = 0.0
     var shooterVelocity: Double = 0.0
     var offPow: Double = 0.0
-    var busyShooting: Boolean = false;
+    var busyGate: Boolean = false;
     fun init() {}
+    val OpenGate: Command = sequential(
+        Command.build().setStart {
+            busyGate = true
+            gate.position = 0.5
+        },
+        waitMs(100.0),
+        Command.build().setStart {
+            busyGate = false
+            gate.position = 0.0
+        }
+    )
+    /*
     fun changePow(changed: Double): Command {
         if (busyShooting) return Command.build()
         return Command.build()
@@ -34,38 +51,15 @@ object Shooter {
                 shooter.power = changed
             }
     }
-    fun Shoot(): Command {
-        if (busyShooting) return Command.build()
-        return ShootCmd
-    }
-    private var ShootCmd: Command = sequential(
-        Command.build() .setStart { busyShooting = true
-            Rollers.busyShooting = true},
-        changePow(shooterPow),
-        waitMs(250.0),
-        Rollers.changePow(1.0),
-        waitMs(250.0),
-        changePow(offPow),
-        waitMs(250.0),
-        Rollers.changePow(0.0),
-        Command.build() .setStart { busyShooting = false
-            Rollers.busyShooting = false}
-    )
+
+     */
 
     fun update() {
         shooterVelocity = shooter.velocity
         //1000.0 is placeholder, real target will be calculated through a shooting equation
-        shooterPow = ShooterVelocityController.calculate(1000.0,
-            shooterVelocity,
-            ShooterVelocityController.DEFAULT_KP,
-            ShooterVelocityController.DEFAULT_KS,
-            ShooterVelocityController.DEFAULT_KV)
+        Flywheel.update()
+        Turret.update()
         //shooter will never be turned off, this just adds extra calculations
         // to each loop, which increases looptime
-        offPow = ShooterVelocityController.calculate(0.0,
-            shooterVelocity,
-            ShooterVelocityController.DEFAULT_KP,
-            ShooterVelocityController.DEFAULT_KS,
-            ShooterVelocityController.DEFAULT_KV)
     }
 }
