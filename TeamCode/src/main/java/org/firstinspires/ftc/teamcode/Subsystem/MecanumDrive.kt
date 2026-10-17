@@ -2,17 +2,18 @@ package org.firstinspires.ftc.teamcode.Subsystem
 
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior
+import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import kotlin.math.abs
 import kotlin.math.max
 
 object MecanumDrive {
-    private lateinit var flDrive: DcMotor
-    private lateinit var frDrive: DcMotor
-    private lateinit var blDrive: DcMotor
+    private lateinit var flDrive: DcMotorEx
+    private lateinit var frDrive: DcMotorEx
+    private lateinit var blDrive: DcMotorEx
 
-    private lateinit var brDrive: DcMotor
+    private lateinit var brDrive: DcMotorEx
 
     private var flPower = 0.0;
     private var blPower = 0.0;
@@ -20,10 +21,10 @@ object MecanumDrive {
     private var brPower = 0.0;
 
     fun init(hardwareMap: HardwareMap) {
-        flDrive = hardwareMap.get(DcMotor::class.java, "flDrive")
-        frDrive = hardwareMap.get(DcMotor::class.java, "frDrive")
-        blDrive = hardwareMap.get(DcMotor::class.java, "blDrive")
-        brDrive = hardwareMap.get(DcMotor::class.java, "brDrive")
+        flDrive = hardwareMap.get(DcMotorEx::class.java, "flDrive")
+        frDrive = hardwareMap.get(DcMotorEx::class.java, "frDrive")
+        blDrive = hardwareMap.get(DcMotorEx::class.java, "blDrive")
+        brDrive = hardwareMap.get(DcMotorEx::class.java, "brDrive")
 
         frDrive.direction = DcMotorSimple.Direction.REVERSE
         brDrive.direction = DcMotorSimple.Direction.REVERSE
@@ -59,10 +60,10 @@ object MecanumDrive {
             ZeroPowerBehavior.BRAKE
         else
             ZeroPowerBehavior.FLOAT
-        frDrive.setZeroPowerBehavior(behavior)
-        blDrive.setZeroPowerBehavior(behavior)
-        frDrive.setZeroPowerBehavior(behavior)
-        brDrive.setZeroPowerBehavior(behavior)
+        frDrive.zeroPowerBehavior = behavior
+        blDrive.zeroPowerBehavior = behavior
+        frDrive.zeroPowerBehavior = behavior
+        brDrive.zeroPowerBehavior = behavior
     }
 
 

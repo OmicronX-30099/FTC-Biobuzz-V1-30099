@@ -1,23 +1,29 @@
 package org.firstinspires.ftc.teamcode.Subsystem
 
 import com.pedropathing.ivy.Command
-import com.pedropathing.ivy.behaviors.BlockedBehavior
-import com.pedropathing.ivy.behaviors.ConflictBehavior
-import com.pedropathing.ivy.behaviors.EndCondition
-import com.pedropathing.ivy.behaviors.InterruptedBehavior
 import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.groups.Groups.sequential
-import com.qualcomm.robotcore.hardware.DcMotor
+import com.qualcomm.robotcore.hardware.DcMotorEx
+import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
-import org.firstinspires.ftc.teamcode.Subsystem.Shooter.ShootCmd
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 
+/**
+ * these are some suggestions
+ * 1.look at suggestions in the update function
+ * 2.for shooting, I dont want it to run a set sequence,
+ * make it so that the intake runs at 1.0 as long as trigger is pressed
+ * 3.also, changePow in the Shoot command is redundant, power of shooter should
+ * be actively adjusted no matter what state the robot is in
+ * 4.get turret done quickly
+ */
 object Shooter {
 
 
-    val hood: DcMotor = hardwareMap.get(DcMotor::class.java, "hood")
-    val shooter: DcMotor = hardwareMap.get(DcMotor::class.java, "shooter")
-    var shooterPow: Double = 0.0;
+    val hood: Servo = hardwareMap.get(Servo::class.java, "hood")
+    val shooter: DcMotorEx = hardwareMap.get(DcMotorEx::class.java, "shooter")
+    var shooterPow: Double = 0.0
+    var shooterVelocity: Double = 0.0
     var offPow: Double = 0.0
     var busyShooting: Boolean = false;
     fun init() {}
@@ -47,11 +53,17 @@ object Shooter {
     )
 
     fun update() {
-        shooterPow = ShooterVelocityController.calculate(1000.0, 1000.0,
+        shooterVelocity = shooter.velocity
+        //1000.0 is placeholder, real target will be calculated through a shooting equation
+        shooterPow = ShooterVelocityController.calculate(1000.0,
+            shooterVelocity,
             ShooterVelocityController.DEFAULT_KP,
             ShooterVelocityController.DEFAULT_KS,
             ShooterVelocityController.DEFAULT_KV)
-        offPow = ShooterVelocityController.calculate(0.0, 1000.0,
+        //shooter will never be turned off, this just adds extra calculations
+        // to each loop, which increases looptime
+        offPow = ShooterVelocityController.calculate(0.0,
+            shooterVelocity,
             ShooterVelocityController.DEFAULT_KP,
             ShooterVelocityController.DEFAULT_KS,
             ShooterVelocityController.DEFAULT_KV)
