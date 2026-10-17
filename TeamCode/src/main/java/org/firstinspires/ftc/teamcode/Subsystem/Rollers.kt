@@ -3,41 +3,47 @@ package org.firstinspires.ftc.teamcode.Subsystem
 import com.pedropathing.ivy.Command
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.HardwareMap
-import org.firstinspires.ftc.teamcode.Subsystem.Shooter.shooter
+import kotlin.math.abs
 
+//435 * 16 teeth / 2 teeth for the turret
+// breakbeam, has four sensors that utilize light to check if there is balls or not
+// absolute encoder, checks the degrees of the degree or circle angle of the turret, blue line and red line means absolute 0, degree doesn't go beyond 360
+// has a 1:1 gear, every rotation of the moter every 72 rotations of the
+// relative encoder, can go beyond 360, however can be offset
 object Rollers {
+    var POWER_EPSILON = 0.001;
     var rollBool: Boolean = false
-    var currRollSpeed: Double = 0.0
-    lateinit var intakeRoll: DcMotorEx;
-    lateinit var transferRoll: DcMotorEx
+    var busyShooting: Boolean = false
+    // full Intake includes both rollers & transfer
+    var intakePower: Double = 0.0
+    lateinit var fullIntake1: DcMotorEx;
+    lateinit var fullIntake2: DcMotorEx
     fun init(hardwareMap: HardwareMap) {
 
-        intakeRoll = hardwareMap.get(DcMotorEx::class.java, "intR")
-        transferRoll = hardwareMap.get(DcMotorEx::class.java, "trans")
+        fullIntake1 = hardwareMap.get(DcMotorEx::class.java, "int1")
+        fullIntake2 = hardwareMap.get(DcMotorEx::class.java, "int2")
     }
     fun intialize(intakeSpeed: Double, reset: Boolean = false) {
         if (reset) {
-            currRollSpeed = 0.0
+            intakePower = 0.0
             rollBool = false
             return
         }
-        currRollSpeed = intakeSpeed
-
+        intakePower = intakeSpeed
     }
-    fun changePow(iPow: Double, tPow: Double): Command {
+    // usually gonna be at 1.0 power
+    fun changePow(iPow: Double): Command {
+        if (busyShooting) return Command.build()
         return Command.build()
             .setStart{
-                intakeRoll.power = iPow
-                transferRoll.power = tPow
+                interChangePow(iPow)
             }
     }
-
-    val RollIntake: Command = Command.build()
-        .setStart{
-            intakeRoll.power = 1.0
-
-        }
-        .setDone{
-            rollBool
-        }
+    private fun interChangePow(iPow: Double) {
+        // internal change power
+        if (abs(intakePower - iPow) <= POWER_EPSILON) return
+        intakePower = iPow
+        fullIntake1.power = iPow
+        fullIntake2.power = iPow
+    }
 }
