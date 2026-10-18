@@ -19,10 +19,10 @@ import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMa
 object TeleConstants {
     var drivetrainConfig: MecanumConfig = MecanumConfig(
         Configuration { c: MecanumConfig? ->
-            c!!.frontLeftName.set("lf")
-            c.backLeftName.set("lr")
-            c.frontRightName.set("rf")
-            c.backRightName.set("rr")
+            c!!.frontLeftName.set("flDrive")
+            c.backLeftName.set("blDrive")
+            c.frontRightName.set("frDrive")
+            c.backRightName.set("brDrive")
 
             c.frontLeftDirection.set(DcMotorSimple.Direction.REVERSE)
             c.backLeftDirection.set(DcMotorSimple.Direction.REVERSE)

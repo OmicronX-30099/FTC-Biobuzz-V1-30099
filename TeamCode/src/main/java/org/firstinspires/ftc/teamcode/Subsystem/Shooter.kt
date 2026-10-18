@@ -6,15 +6,13 @@ import com.pedropathing.ivy.groups.Groups.sequential
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
-import org.firstinspires.ftc.teamcode.Subsystem.Rollers.busyShooting
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
-import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 
 /**
  * these are some suggestions
  * 1.look at suggestions in the update function
- * 2.for shooting, I dont want it to run a set sequence,
+ * 2.for shooting, I don't want it to run a set sequence,
  * make it so that the intake runs at 1.0 as long as trigger is pressed
  * 3.also, changePow in the Shoot command is redundant, power of shooter should
  * be actively adjusted no matter what state the robot is in

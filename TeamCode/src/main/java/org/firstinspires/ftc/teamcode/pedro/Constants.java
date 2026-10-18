@@ -18,10 +18,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 public class Constants {
     public static MecanumConfig drivetrainConfig = new MecanumConfig(
             c -> {
-                c.frontLeftName.set("lf");
-                c.backLeftName.set("lr");
-                c.frontRightName.set("rf");
-                c.backRightName.set("rr");
+                c.frontLeftName.set("flDrive");
+                c.backLeftName.set("blDrive");
+                c.frontRightName.set("frDrive");
+                c.backRightName.set("brDrive");
 
                 c.frontLeftDirection.set(DcMotorSimple.Direction.REVERSE);
                 c.backLeftDirection.set(DcMotorSimple.Direction.REVERSE);
