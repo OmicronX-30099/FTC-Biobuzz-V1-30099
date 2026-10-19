@@ -80,6 +80,51 @@ the flywheel settles again are measured as one combined recovery. Timing is
 limited by encoder/OpMode sampling and measures from detected velocity drop,
 rather than the exact instant the ball is launched.
 
+### TeleOp servo positions and controls
+
+Measured positions are stored in `Util/ServoPositions.kt`:
+
+| Servo | Position | Value |
+| --- | --- | --- |
+| Hood | Default | 0.35 |
+| Hood | 15 degrees (recorded calibration) | 0.485 |
+| Hood | Maximum | 0.16 |
+| Gate | Closed (default) | 0.87 |
+| Gate | Open for shooting | 0.75 |
+| Left flower | Down / Up | 0.5 / 0.83 |
+| Right flower | Down / Up | 0.49 / 0.82 |
+
+`TeleOpBlue` initializes the hood to 0.35, closes the gate, and raises the
+left flower. Only `left_flower` is currently used to operate the flower intake;
+`right_flower` is not initialized or commanded, and its calibration is retained.
+Each press of gamepad 1's right bumper toggles the left flower: first down, then up.
+Holding the bumper does not repeatedly toggle it. Gamepad 1's left bumper
+holds the shooting gate open at 0.75; releasing it closes the gate at 0.87 on the
+next control loop, with no timed sequence. STOP also closes the gate.
+While the left bumper is held, trigger-controlled intake power is capped at
+0.5 in either direction; releasing it restores the normal maximum of 1.0.
+The hood maximum is recorded for future use; no
+hood adjustment button is assigned. The shooter test modes also default their
+hood position to 0.35.
+
+### Servo test
+
+Select `Servo Test` in the Tests group and press INIT. In Dashboard, open
+`ServoTest`, set `SERVO_NAME` and `SERVO_NAME_2` to the two positional servos'
+robot configuration names, and save. The first name defaults to `hood`; the
+second defaults to blank. Leave either name blank to disable that slot. The
+selections update during INIT; telemetry shows each selected name and connection
+or reports that the name was not found. If both names select the same servo,
+only the first slot commands it.
+
+Press START, then change `POSITION` and `POSITION_2` independently from 0 to 1.
+`REVERSED` and `REVERSED_2` change each servo's direction live.
+Positions outside 0–1 are clipped; non-finite values are
+ignored. No position is commanded before START. To select another servo after
+START, stop and press INIT again. Telemetry appears on Driver Station and
+Dashboard and reports commanded position, not physical feedback. This test is
+for positional servos, not continuous-rotation servos.
+
 ## NOTICE
 
 This repository contains the public FTC SDK for the BIOBUZZ (2026-2027) competition season.

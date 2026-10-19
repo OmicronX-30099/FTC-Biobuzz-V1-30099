@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController;
 import org.firstinspires.ftc.teamcode.control.ShooterRecoveryTimer;
+import org.firstinspires.ftc.teamcode.Util.ServoPositions;
 
 /**
  * Follows the direct init/loop structure of 16010-Worlds' testing OpModes.
@@ -27,7 +28,7 @@ public class ShooterTest extends OpMode {
     public static String MOTOR_NAME = "shooter";
     public static String HOOD_NAME = "hood";
     public static volatile double TARGET_VELOCITY_TPS = 1500.0;
-    public static volatile double HOOD_POSITION = 0.5;
+    public static volatile double HOOD_POSITION = ServoPositions.HOOD_DEFAULT;
 
     // Starting gains from FTC-Decode-v3; tune them for this season's shooter.
     public static volatile double kP = ShooterVelocityController.DEFAULT_KP;

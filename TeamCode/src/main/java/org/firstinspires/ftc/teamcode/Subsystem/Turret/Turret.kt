@@ -1,19 +1,10 @@
 package org.firstinspires.ftc.teamcode.Subsystem.Turret
 
-import android.transition.TransitionManager.go
-import com.pedropathing.config.Configuration
-import com.pedropathing.revhub.localizers.PinpointConfig
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver
+import com.pedropathing.math.Pose
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorEx
-import com.qualcomm.robotcore.hardware.Servo
-import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
-import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret.goal
-import org.firstinspires.ftc.teamcode.Util.Alliance
-import org.firstinspires.ftc.teamcode.Util.BlueAlliance
+import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
-import org.firstinspires.ftc.teamcode.Util.RedAlliance
-import org.firstinspires.ftc.teamcode.pedro.TeleConstants
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -26,21 +17,23 @@ object Turret {
     var targetCordX = 0.0
     var targetCordY = 0.0
     // Converting Degrees to Relative Encoder Ticks
-    val turret = hardwareMap.get(DcMotorEx::class.java, "turrSer")
-    val follower = TeleConstants.follower
-    fun intialize() {
+    lateinit var turret: DcMotorEx
+        private set
+    private var lastTargetTicks = 0
+    private var running = false
+
+    fun init(hardwareMap: HardwareMap) {
+        turret = hardwareMap.get(DcMotorEx::class.java, "turret")
         turret.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
         turret.targetPosition = 0
         turret.mode = DcMotor.RunMode.RUN_TO_POSITION
         turret.power = 0.0
         turret.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+        lastTargetTicks = 0
+        running = false
     }
 
-    fun update() {
-        follower.update()
-
-        val pose = follower.pose()
-
+    fun update(pose: Pose) {
         val dx = CurrAlliance.CurrGoal.x() - pose.x()
         val dy = CurrAlliance.CurrGoal.y() - pose.y()
 
@@ -61,8 +54,20 @@ object Turret {
                 Math.toDegrees(limitedAngle) / 360.0 * (384.5*4.5)
                 ).roundToInt()
 
-        turret.targetPosition = targetTicks
-        turret.power = 0.4
+        // Re-sending an unchanged target still sends a command to the hub.
+        if (targetTicks != lastTargetTicks) {
+            turret.targetPosition = targetTicks
+            lastTargetTicks = targetTicks
+        }
+        if (!running) {
+            turret.power = 0.4
+            running = true
+        }
 
+    }
+
+    fun stop() {
+        turret.power = 0.0
+        running = false
     }
 }

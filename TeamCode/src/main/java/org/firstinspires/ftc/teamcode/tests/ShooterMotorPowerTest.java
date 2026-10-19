@@ -10,11 +10,13 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.teamcode.Util.ServoPositions;
+
 @Config
 @TeleOp(name = "Shooter Motor Power Test", group = "Tests")
 public class ShooterMotorPowerTest extends LinearOpMode {
     public static volatile double MOTOR_POWER = 0.1;
-    public static volatile double HOOD_POSITION = 0.5;
+    public static volatile double HOOD_POSITION = ServoPositions.HOOD_DEFAULT;
 
     @Override
     public void runOpMode() throws InterruptedException {

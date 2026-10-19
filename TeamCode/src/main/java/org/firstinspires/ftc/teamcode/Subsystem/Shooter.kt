@@ -1,63 +1,62 @@
 package org.firstinspires.ftc.teamcode.Subsystem
 
-import com.pedropathing.ivy.Command
-import com.pedropathing.ivy.commands.Commands.waitMs
-import com.pedropathing.ivy.groups.Groups.sequential
+import com.pedropathing.math.Pose
 import com.qualcomm.robotcore.hardware.DcMotorEx
+import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.hardware.Servo
-import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
+import org.firstinspires.ftc.teamcode.Util.ServoPositions
+import org.firstinspires.ftc.teamcode.pedro.TeleConstants
 
-/**
- * these are some suggestions
- * 1.look at suggestions in the update function
- * 2.for shooting, I don't want it to run a set sequence,
- * make it so that the intake runs at 1.0 as long as trigger is pressed
- * 3.also, changePow in the Shoot command is redundant, power of shooter should
- * be actively adjusted no matter what state the robot is in
- * 4.get turret done quickly
- */
 object Shooter {
-    val gate: Servo = hardwareMap.get(Servo::class.java, "gate")
+    // Temporarily disabled; enable here to restore the turret's full lifecycle.
+    private const val TURRET_ENABLED = false
+
+    lateinit var gate: Servo
+        private set
     var gateOpen: Boolean = false
+        private set
 
 
-    val hood: Servo = hardwareMap.get(Servo::class.java, "hood")
-    val shooter: DcMotorEx = hardwareMap.get(DcMotorEx::class.java, "shooter")
+    val hood: Servo get() = Flywheel.hood
+    val shooter: DcMotorEx get() = Flywheel.shooter
     var shooterPow: Double = 0.0
     var shooterVelocity: Double = 0.0
     var offPow: Double = 0.0
-    var busyGate: Boolean = false;
-    fun init() {}
-    val OpenGate: Command = sequential(
-        Command.build().setStart {
-            busyGate = true
-            gate.position = 0.5
-        },
-        waitMs(100.0),
-        Command.build().setStart {
-            busyGate = false
-            gate.position = 0.0
-        }
-    )
-    /*
-    fun changePow(changed: Double): Command {
-        if (busyShooting) return Command.build()
-        return Command.build()
-            .setStart{
-                shooter.power = changed
-            }
+    fun init(hardwareMap: HardwareMap) {
+        gate = hardwareMap.get(Servo::class.java, "gate")
+        gate.direction = Servo.Direction.FORWARD
+        Flywheel.init(hardwareMap)
+        if (TURRET_ENABLED) Turret.init(hardwareMap)
+        gate.position = ServoPositions.GATE_CLOSED
+        gateOpen = false
+        shooterPow = 0.0
+        shooterVelocity = 0.0
+    }
+    fun setGate(open: Boolean) {
+        if (open == gateOpen) return
+        gate.position = if (open) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
+        gateOpen = open
     }
 
-     */
-
     fun update() {
+        // Only update localization: follower.update() would also command the drive motors.
+        TeleConstants.follower.localizer.update()
+        update(TeleConstants.follower.pose())
+    }
+
+    fun update(pose: Pose) {
         shooterVelocity = shooter.velocity
-        //1000.0 is placeholder, real target will be calculated through a shooting equation
-        Flywheel.update()
-        Turret.update()
-        //shooter will never be turned off, this just adds extra calculations
-        // to each loop, which increases looptime
+        shooterPow = Flywheel.update(pose, shooterVelocity)
+        if (TURRET_ENABLED) Turret.update(pose)
+    }
+
+    fun stop() {
+        Flywheel.stop()
+        if (TURRET_ENABLED) Turret.stop()
+        gate.position = ServoPositions.GATE_CLOSED
+        gateOpen = false
+        shooterPow = 0.0
     }
 }

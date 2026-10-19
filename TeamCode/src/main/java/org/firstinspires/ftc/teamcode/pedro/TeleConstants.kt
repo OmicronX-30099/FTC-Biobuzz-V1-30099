@@ -14,7 +14,6 @@ import com.pedropathing.revhub.localizers.PinpointLocalizer
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
-import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
 
 object TeleConstants {
     var drivetrainConfig: MecanumConfig = MecanumConfig(
@@ -81,9 +80,14 @@ object TeleConstants {
             c.naturalStrafeDeceleration.set(104.49787535782846)
         }
     )
-    val follower: Follower = Follower(
-        PinpointLocalizer(hardwareMap, localizerConfig),
-        Mecanum(hardwareMap, drivetrainConfig),
-        Foresight(foresightConfig)
-    )
+    lateinit var follower: Follower
+        private set
+
+    fun init(hardwareMap: HardwareMap) {
+        follower = Follower(
+            PinpointLocalizer(hardwareMap, localizerConfig),
+            Mecanum(hardwareMap, drivetrainConfig),
+            Foresight(foresightConfig)
+        )
+    }
 }
