@@ -1,0 +1,24 @@
+{
+  "observations": [
+    {
+      "id": "pose-59.35-7.68-first-trajectory-observation",
+      "robot_position_inches": {"x": 59.35, "y": 7.68},
+      "reported_target_y_inches": 59.0,
+      "reported_landing_y_inches": 71.0,
+      "reported_peak_height_inches": 75.0,
+      "peak_height_reference": "above shooter exit",
+      "landing_height_reference": "descending crossing of 104 cm above shooter exit",
+      "reported_entry_angle_down_degrees_approx": 60.0,
+      "entry_angle_measurement_method": "visual estimate",
+      "reported_flight_time_seconds_range": [0.87, 0.97],
+      "flight_time_end_event": "reported landing; taken to mean goal-height crossing, not floor impact",
+      "shooter_exit_height_above_floor_inches": 10.0,
+      "hood_servo_position": null,
+      "measured_pre_shot_motor_tps": null,
+      "velocity_multiplier": 1.0,
+      "velocity_offset_tps": 0.0,
+      "included_in_fit": false,
+      "notes": "User confirms all heights are measured from shooter exit and Y=71 is the goal-height crossing. No driver velocity adjustments. User reports variation between shots; do not combine approximate peak, time, and entry into one exact trajectory. Hood/settled motor telemetry and landing X have not been independently recorded."
+    }
+  ]
+}

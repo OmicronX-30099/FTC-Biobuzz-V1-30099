@@ -7,12 +7,8 @@ import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
-import org.firstinspires.ftc.teamcode.pedro.TeleConstants
 
 object Shooter {
-    // Temporarily disabled; enable here to restore the turret's full lifecycle.
-    private const val TURRET_ENABLED = false
-
     lateinit var gate: Servo
         private set
     var gateOpen: Boolean = false
@@ -28,33 +24,32 @@ object Shooter {
         gate = hardwareMap.get(Servo::class.java, "gate")
         gate.direction = Servo.Direction.FORWARD
         Flywheel.init(hardwareMap)
-        if (TURRET_ENABLED) Turret.init(hardwareMap)
+        Turret.init(hardwareMap)
         gate.position = ServoPositions.GATE_CLOSED
         gateOpen = false
         shooterPow = 0.0
         shooterVelocity = 0.0
     }
+    fun start() {
+        Turret.start()
+    }
+
     fun setGate(open: Boolean) {
         if (open == gateOpen) return
         gate.position = if (open) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
         gateOpen = open
     }
 
-    fun update() {
-        // Only update localization: follower.update() would also command the drive motors.
-        TeleConstants.follower.localizer.update()
-        update(TeleConstants.follower.pose())
-    }
-
-    fun update(pose: Pose) {
+    @JvmOverloads
+    fun update(pose: Pose, velocityOffsetTPS: Double = 0.0) {
         shooterVelocity = shooter.velocity
-        shooterPow = Flywheel.update(pose, shooterVelocity)
-        if (TURRET_ENABLED) Turret.update(pose)
+        shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)
+        Turret.update(pose)
     }
 
     fun stop() {
         Flywheel.stop()
-        if (TURRET_ENABLED) Turret.stop()
+        Turret.stop()
         gate.position = ServoPositions.GATE_CLOSED
         gateOpen = false
         shooterPow = 0.0

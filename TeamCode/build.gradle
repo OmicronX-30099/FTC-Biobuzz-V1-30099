@@ -47,3 +47,34 @@ dependencies {
     implementation project(':FtcRobotController')
     testImplementation 'junit:junit:4.13.2'
 }
+
+// Load 0.3.2 re-merges AGP's intermediate DEX files. With AGP 9.4 this loses
+// synthetic backport context in the Pedro tuners. Dex the complete Java/Kotlin
+// class bundle instead, keeping Sloth's output name and deployment task.
+afterEvaluate {
+    def slothClasses = tasks.named('bundleDebugClassesToCompileJar')
+    def javaCompile = tasks.named('compileDebugJavaWithJavac')
+
+    tasks.named('assembleSloth') {
+        dependsOn slothClasses
+        inputs.files(slothClasses.map { it.outputs.files }).withPropertyName('projectClasses')
+        inputs.files(javaCompile.map { it.classpath }).withPropertyName('compileClasspath')
+        inputs.files(android.bootClasspath).withPropertyName('androidBootClasspath')
+        inputs.property('minApi', android.defaultConfig.minSdkVersion.apiLevel)
+
+        setActions([])
+        doLast {
+            def outputFile = getOutputDir().file("${getBundleBaseName().get()}.jar").get().asFile
+            java.nio.file.Files.deleteIfExists(outputFile.toPath())
+            def command = com.android.tools.r8.D8Command.builder()
+                    .addProgramFiles(slothClasses.get().outputs.files.singleFile.toPath())
+                    .addClasspathFiles(javaCompile.get().classpath.files.collect { it.toPath() })
+                    .addLibraryFiles(android.bootClasspath.collect { it.toPath() })
+                    .setMinApiLevel(android.defaultConfig.minSdkVersion.apiLevel)
+                    .setMode(com.android.tools.r8.CompilationMode.RELEASE)
+                    .setOutput(outputFile.toPath(), com.android.tools.r8.OutputMode.DexIndexed)
+                    .build()
+            com.android.tools.r8.D8.run(command)
+        }
+    }
+}

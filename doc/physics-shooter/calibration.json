@@ -1,0 +1,142 @@
+{
+  "status": "PROVISIONAL: effective drag and actual launch-angle offset remain unmeasured",
+  "user_confirmation": {
+    "game": "BIOBUZZ",
+    "ball_diameter_in": 2.8,
+    "ball_mass_g": 25,
+    "servo_full_travel_deg": 355.0,
+    "pwm_min_us": 600.0,
+    "pwm_max_us": 2400.0,
+    "servo_full_pwm_min_us": 500.0,
+    "servo_full_pwm_max_us": 2500.0,
+    "hood_gear_ratio": "30/148",
+    "hood_degrees_per_position": 64.76351351351352,
+    "servo_0_16_hood_deg": 36.04814189189189,
+    "linkage_linearity_user_confirmed": true
+  },
+  "constants": {
+    "k_mps_per_tps": 0.003003057976717343,
+    "b_mps": 0.9227364363233359,
+    "cd_assumed": 0.47,
+    "angle_offset_assumed_deg": 0.0,
+    "rho_kg_m3": 1.225,
+    "diameter_m": 0.07111999999999999,
+    "mass_kg": 0.02494758035,
+    "target_height_m": 1.04,
+    "minimum_vertex_m": 1.35,
+    "safety_margin_m": 0.01,
+    "preferred_entry_angle_deg": 30.0
+  },
+  "training": {
+    "rmse_tps": 13.574535271304162,
+    "mae_tps": 12.869879600694105
+  },
+  "leave_one_out": {
+    "rmse_tps": 42.46450244399035,
+    "mae_tps": 34.89313113028135
+  },
+  "interpolation_leave_one_out": {
+    "rmse_tps": 41.812821760622754,
+    "mae_tps": 39.829937973081314
+  },
+  "interpolation_training": {
+    "rmse_tps": 0,
+    "mae_tps": 0
+  },
+  "validation": {
+    "midpoint_max_target_error_mm": 0.004548386997482723,
+    "minimum_feasible_midpoint_vertex_cm": 136.05591196091447
+  },
+  "measurements": [
+    {
+      "robot_x_in": 8.2,
+      "robot_y_in": 7.3,
+      "tps": 1600.0,
+      "hood_servo": 0.25,
+      "measured_hood_deg": "",
+      "include_in_fit": true,
+      "note": "Screenshot; physical hood angle was not measured",
+      "distance_in": 70.41114968525936,
+      "hood_source": "derived_from_user_geometry",
+      "hood_deg": 30.219425675675673,
+      "required_exit_mps": 5.768280814211421,
+      "predicted_tps": 1613.536740034827,
+      "residual_tps": 13.536740034827062,
+      "absolute_error_tps": 13.536740034827062,
+      "absolute_error_percent": 0.8460462521766915
+    },
+    {
+      "robot_x_in": 31.9,
+      "robot_y_in": 7.47,
+      "tps": 1540.0,
+      "hood_servo": 0.25,
+      "measured_hood_deg": "",
+      "include_in_fit": true,
+      "note": "Screenshot; physical hood angle was not measured",
+      "distance_in": 56.88717693821693,
+      "hood_source": "derived_from_user_geometry",
+      "hood_deg": 30.219425675675673,
+      "required_exit_mps": 5.490573406219482,
+      "predicted_tps": 1521.0618660413845,
+      "residual_tps": -18.93813395861548,
+      "absolute_error_tps": 18.93813395861548,
+      "absolute_error_percent": 1.2297489583516545
+    },
+    {
+      "robot_x_in": 55.76,
+      "robot_y_in": 7.56,
+      "tps": 1480.0,
+      "hood_servo": 0.3,
+      "measured_hood_deg": "",
+      "include_in_fit": true,
+      "note": "Screenshot; physical hood angle was not measured",
+      "distance_in": 51.440559872536376,
+      "hood_source": "derived_from_user_geometry",
+      "hood_deg": 26.981250000000003,
+      "required_exit_mps": 5.346836566925049,
+      "predicted_tps": 1473.198374757226,
+      "residual_tps": -6.80162524277398,
+      "absolute_error_tps": 6.80162524277398,
+      "absolute_error_percent": 0.4595692731604041
+    },
+    {
+      "robot_x_in": 79.5,
+      "robot_y_in": 7.67,
+      "tps": 1540.0,
+      "hood_servo": 0.3,
+      "measured_hood_deg": "",
+      "include_in_fit": false,
+      "note": "Previously removed 56.45-inch row; diagnostic comparison only",
+      "distance_in": 56.45368809918445,
+      "hood_source": "derived_from_user_geometry",
+      "hood_deg": 26.981250000000003,
+      "required_exit_mps": 5.455532550811768,
+      "predicted_tps": 1509.3934747950664,
+      "residual_tps": -30.606525204933632,
+      "absolute_error_tps": 30.606525204933632,
+      "absolute_error_percent": 1.987436701619067
+    },
+    {
+      "robot_x_in": 79.43,
+      "robot_y_in": 31.51,
+      "tps": 1440.0,
+      "hood_servo": 0.485,
+      "measured_hood_deg": "15",
+      "include_in_fit": true,
+      "note": "User confirmed 15-degree hood / 75-degree launch",
+      "distance_in": 36.12014673281381,
+      "hood_source": "measured",
+      "hood_deg": 15.0,
+      "required_exit_mps": 5.283786296844482,
+      "predicted_tps": 1452.20301916656,
+      "residual_tps": 12.203019166559898,
+      "absolute_error_tps": 12.203019166559898,
+      "absolute_error_percent": 0.8474318865666596
+    }
+  ],
+  "ideal_transfer": {
+    "k": 0.002709520142421419,
+    "b": 1.160923015613243
+  },
+  "first_feasible_in": 41.5
+}

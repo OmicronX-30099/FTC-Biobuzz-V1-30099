@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.tests;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -12,7 +11,6 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Util.ServoPositions;
 
-@Config
 @TeleOp(name = "Shooter Motor Power Test", group = "Tests")
 public class ShooterMotorPowerTest extends LinearOpMode {
     public static volatile double MOTOR_POWER = 0.1;
@@ -34,7 +32,7 @@ public class ShooterMotorPowerTest extends LinearOpMode {
 
             while (opModeIsActive()) {
                 double motorPower = Range.clip(MOTOR_POWER, -1.0, 1.0);
-                double hoodPosition = Range.clip(HOOD_POSITION, 0.0, 1.0);
+                double hoodPosition = ServoPositions.clipHoodPosition(HOOD_POSITION);
                 shooter.setPower(motorPower);
                 hood.setPosition(hoodPosition);
                 telemetry.addData("Motor power", motorPower);

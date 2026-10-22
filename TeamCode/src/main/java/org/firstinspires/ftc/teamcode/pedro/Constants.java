@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.pedro;
 import com.pedropathing.algorithm.Foresight;
 import com.pedropathing.algorithm.ForesightConfig;
 import com.pedropathing.controllers.Controller;
-import com.pedropathing.drivetrain.Drivetrain;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Matrix;
 import com.pedropathing.math.Vector2D;
@@ -13,6 +12,7 @@ import com.pedropathing.revhub.localizers.PinpointConfig;
 import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
@@ -34,10 +34,13 @@ public class Constants {
     public static PinpointConfig localizerConfig = new PinpointConfig(
             c -> {
                 c.name.set("pinpoint");
-                c.xPodOffset.set(2.187);
-                c.yPodOffset.set(-4.572);
-                c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-                c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+                c.xPodOffset.set(-6.64);
+                c.yPodOffset.set(-1.87);
+                // Pod axes are robot-relative: forward and lateral, respectively.
+                // At the 90-degree starting heading, forward must increase field Y
+                // and moving right must increase field X.
+                c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+                c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
             }
     );
     public static ForesightConfig foresightConfig = new ForesightConfig(
@@ -67,9 +70,13 @@ public class Constants {
     );
 
     public static Follower create(HardwareMap h) {
+        PinpointLocalizer localizer = new PinpointLocalizer(h, localizerConfig);
+        Mecanum drivetrain = new Mecanum(h, drivetrainConfig);
+        // Pedro initializes in FLOAT; enable BRAKE during INIT as well as manual driving.
+        drivetrain.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         return new Follower(
-                new PinpointLocalizer(h, localizerConfig),
-                new Mecanum(h, drivetrainConfig),
+                localizer,
+                drivetrain,
                 new Foresight(foresightConfig));
     }
 }

@@ -1,0 +1,420 @@
+{
+  "source": "C:\\Users\\xiaom\\StudioProjects\\FTC-Biobuzz-V1-30099\\tools\\physics_shooter\\collected\\shooter-calibration-1777690460337.csv",
+  "status": "REVIEW ONLY: active calibration and LUT unchanged",
+  "rows": 80,
+  "valid_rows": 80,
+  "invalid_rows": [],
+  "outcomes": {
+    "SCORE": 47,
+    "MISS": 22,
+    "UNRATED": 11
+  },
+  "unsettled_attempts": 5,
+  "settled_scores_used": 43,
+  "grouping_distance_step_in": 0.5,
+  "settings": [
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.05714,
+      "distance_max_in": 45.05714,
+      "hood_servo": 0.32,
+      "target_motor_tps": 1440.0,
+      "attempts": 1,
+      "outcomes": {
+        "MISS": 1
+      },
+      "settled_scores": 0,
+      "settled_misses": 1,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1440.0
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.046852,
+      "distance_max_in": 45.050033,
+      "hood_servo": 0.32,
+      "target_motor_tps": 1460.0,
+      "attempts": 3,
+      "outcomes": {
+        "SCORE": 2,
+        "MISS": 1
+      },
+      "settled_scores": 2,
+      "settled_misses": 1,
+      "settled_rated": 3,
+      "mean_pre_feed_motor_tps": 1453.3333333333333
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.023767,
+      "distance_max_in": 45.023767,
+      "hood_servo": 0.33,
+      "target_motor_tps": 1480.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1500.0
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.03812,
+      "distance_max_in": 45.044425,
+      "hood_servo": 0.355,
+      "target_motor_tps": 1460.0,
+      "attempts": 2,
+      "outcomes": {
+        "SCORE": 1,
+        "MISS": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 1,
+      "settled_rated": 2,
+      "mean_pre_feed_motor_tps": 1470.0
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.03277,
+      "distance_max_in": 45.03277,
+      "hood_servo": 0.355,
+      "target_motor_tps": 1480.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1480.0
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.061972,
+      "distance_max_in": 45.096728,
+      "hood_servo": 0.36,
+      "target_motor_tps": 1420.0,
+      "attempts": 10,
+      "outcomes": {
+        "SCORE": 7,
+        "MISS": 1,
+        "UNRATED": 2
+      },
+      "settled_scores": 7,
+      "settled_misses": 1,
+      "settled_rated": 8,
+      "mean_pre_feed_motor_tps": 1424.0
+    },
+    {
+      "location_bin_in": 45.0,
+      "distance_min_in": 45.062896,
+      "distance_max_in": 45.062896,
+      "hood_servo": 0.36,
+      "target_motor_tps": 1440.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1440.0
+    },
+    {
+      "location_bin_in": 51.5,
+      "distance_min_in": 51.403081,
+      "distance_max_in": 51.479609,
+      "hood_servo": 0.3,
+      "target_motor_tps": 1480.0,
+      "attempts": 14,
+      "outcomes": {
+        "SCORE": 10,
+        "MISS": 3,
+        "UNRATED": 1
+      },
+      "settled_scores": 10,
+      "settled_misses": 3,
+      "settled_rated": 13,
+      "mean_pre_feed_motor_tps": 1480.0
+    },
+    {
+      "location_bin_in": 54.5,
+      "distance_min_in": 54.497678,
+      "distance_max_in": 54.497678,
+      "hood_servo": 0.3,
+      "target_motor_tps": 1440.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1440.0
+    },
+    {
+      "location_bin_in": 54.5,
+      "distance_min_in": 54.505075,
+      "distance_max_in": 54.535018,
+      "hood_servo": 0.3,
+      "target_motor_tps": 1460.0,
+      "attempts": 7,
+      "outcomes": {
+        "SCORE": 7
+      },
+      "settled_scores": 7,
+      "settled_misses": 0,
+      "settled_rated": 7,
+      "mean_pre_feed_motor_tps": 1454.2857142857142
+    },
+    {
+      "location_bin_in": 54.5,
+      "distance_min_in": 54.49055,
+      "distance_max_in": 54.49055,
+      "hood_servo": 0.3,
+      "target_motor_tps": 1480.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1480.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.380629,
+      "distance_max_in": 70.380629,
+      "hood_servo": 0.27,
+      "target_motor_tps": 1520.0,
+      "attempts": 1,
+      "outcomes": {
+        "UNRATED": 1
+      },
+      "settled_scores": 0,
+      "settled_misses": 0,
+      "settled_rated": 0,
+      "mean_pre_feed_motor_tps": 1560.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.377569,
+      "distance_max_in": 70.479301,
+      "hood_servo": 0.27,
+      "target_motor_tps": 1540.0,
+      "attempts": 12,
+      "outcomes": {
+        "SCORE": 2,
+        "MISS": 5,
+        "UNRATED": 5
+      },
+      "settled_scores": 2,
+      "settled_misses": 5,
+      "settled_rated": 7,
+      "mean_pre_feed_motor_tps": 1538.3333333333333
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.391773,
+      "distance_max_in": 70.393822,
+      "hood_servo": 0.27,
+      "target_motor_tps": 1560.0,
+      "attempts": 2,
+      "outcomes": {
+        "SCORE": 1,
+        "MISS": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 1,
+      "settled_rated": 2,
+      "mean_pre_feed_motor_tps": 1560.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.398423,
+      "distance_max_in": 70.398423,
+      "hood_servo": 0.27,
+      "target_motor_tps": 1580.0,
+      "attempts": 1,
+      "outcomes": {
+        "MISS": 1
+      },
+      "settled_scores": 0,
+      "settled_misses": 1,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1580.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.436027,
+      "distance_max_in": 70.436027,
+      "hood_servo": 0.3,
+      "target_motor_tps": 1540.0,
+      "attempts": 1,
+      "outcomes": {
+        "MISS": 1
+      },
+      "settled_scores": 0,
+      "settled_misses": 1,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1540.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.376377,
+      "distance_max_in": 70.423786,
+      "hood_servo": 0.315,
+      "target_motor_tps": 1580.0,
+      "attempts": 4,
+      "outcomes": {
+        "SCORE": 2,
+        "UNRATED": 1,
+        "MISS": 1
+      },
+      "settled_scores": 2,
+      "settled_misses": 1,
+      "settled_rated": 3,
+      "mean_pre_feed_motor_tps": 1585.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.437102,
+      "distance_max_in": 70.484713,
+      "hood_servo": 0.345,
+      "target_motor_tps": 1540.0,
+      "attempts": 8,
+      "outcomes": {
+        "SCORE": 5,
+        "UNRATED": 1,
+        "MISS": 2
+      },
+      "settled_scores": 3,
+      "settled_misses": 2,
+      "settled_rated": 5,
+      "mean_pre_feed_motor_tps": 1547.5
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.431065,
+      "distance_max_in": 70.431065,
+      "hood_servo": 0.345,
+      "target_motor_tps": 1560.0,
+      "attempts": 1,
+      "outcomes": {
+        "MISS": 1
+      },
+      "settled_scores": 0,
+      "settled_misses": 1,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1560.0
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.393901,
+      "distance_max_in": 70.421084,
+      "hood_servo": 0.345,
+      "target_motor_tps": 1580.0,
+      "attempts": 7,
+      "outcomes": {
+        "SCORE": 4,
+        "MISS": 3
+      },
+      "settled_scores": 2,
+      "settled_misses": 3,
+      "settled_rated": 5,
+      "mean_pre_feed_motor_tps": 1582.857142857143
+    },
+    {
+      "location_bin_in": 70.5,
+      "distance_min_in": 70.389487,
+      "distance_max_in": 70.389487,
+      "hood_servo": 0.345,
+      "target_motor_tps": 1600.0,
+      "attempts": 1,
+      "outcomes": {
+        "SCORE": 1
+      },
+      "settled_scores": 1,
+      "settled_misses": 0,
+      "settled_rated": 1,
+      "mean_pre_feed_motor_tps": 1600.0
+    }
+  ],
+  "conditional_fit": {
+    "cd_assumed": 0.47,
+    "angle_offset_assumed_deg": 0,
+    "k_mps_per_tps": 0.004559223305503099,
+    "b_mps": -1.3213065286697137,
+    "training": {
+      "rmse_tps": 24.977028057770713,
+      "mae_tps": 20.488157856447263,
+      "maximum_absolute_tps": 67.25331424421165
+    },
+    "original_model": {
+      "rmse_tps": 51.59615385498946,
+      "mae_tps": 38.91053236496313,
+      "maximum_absolute_tps": 128.51800461890184
+    },
+    "distance_holdout": {
+      "rmse_tps": 196.91915562102145,
+      "mae_tps": 116.67178264455275,
+      "maximum_absolute_tps": 456.7766873040398
+    },
+    "held_out_locations": [
+      {
+        "location_bin_in": 45.0,
+        "samples": 13,
+        "fitted_k": 0.0045106519361994505,
+        "fitted_b": -1.224038868506438,
+        "rmse_tps": 31.60449197832024,
+        "mae_tps": 23.29955165642932,
+        "maximum_absolute_tps": 73.38927688604963
+      },
+      {
+        "location_bin_in": 51.5,
+        "samples": 10,
+        "fitted_k": 0.004527085877998073,
+        "fitted_b": -1.2467407163943045,
+        "rmse_tps": 26.148432028119004,
+        "mae_tps": 25.449165153252558,
+        "maximum_absolute_tps": 43.46698695945247
+      },
+      {
+        "location_bin_in": 54.5,
+        "samples": 9,
+        "fitted_k": 0.004969887344111342,
+        "fitted_b": -1.960685898179174,
+        "rmse_tps": 30.519246534572986,
+        "mae_tps": 27.804509996506695,
+        "maximum_absolute_tps": 43.44517966269382
+      },
+      {
+        "location_bin_in": 70.5,
+        "samples": 11,
+        "fitted_k": 0.0011575883085077317,
+        "fitted_b": 3.621947391466678,
+        "rmse_tps": 386.03019430220695,
+        "mae_tps": 382.6600218801002,
+        "maximum_absolute_tps": 456.7766873040398
+      }
+    ]
+  },
+  "zero_intercept_fit": {
+    "k_mps_per_tps": 0.003671396345501835,
+    "b_mps": 0,
+    "training": {
+      "rmse_tps": 33.36400499914462,
+      "mae_tps": 27.303339322131446,
+      "maximum_absolute_tps": 80.67474564690906
+    },
+    "distance_holdout": {
+      "rmse_tps": 42.13468025149819,
+      "mae_tps": 36.455934471744044,
+      "maximum_absolute_tps": 91.06821842844101
+    }
+  },
+  "note": "Scores are not precise measured trajectory intersections; misses lack directional error. Do not use repeated-shot training error as evidence of generalization to new distances or hood angles."
+}

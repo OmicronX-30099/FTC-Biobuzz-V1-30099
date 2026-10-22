@@ -1,63 +1,63 @@
 package org.firstinspires.ftc.teamcode.Subsystem.Turret
 
 import com.qualcomm.robotcore.hardware.AnalogInput
-import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.HardwareMap
+import org.firstinspires.ftc.teamcode.control.TurretEncoderTracker
 
-// Subsystem for both absolute & Relative encoders for the turret
-// 72 rotations of the relative encoders is equal to 16 rotations of the turret
-// Absolute encoders goes from 0 which is 0 degrees to 3.3 Volts, which is 360 degrees
-//Relative encoder is inbuilt to the motor, and is belted to the turret, so direction of motion isn't reversed
-//Absolute encoder is geared 1:1 to the motor, so direction of motion is reversed
-// 384.5 ticks per rotation for relative encoder
 object Encoders {
-    lateinit var absEncoder: AnalogInput //absolute encoder
-    lateinit var relEncoder: DcMotorEx //relative encoder
+    lateinit var absEncoder: AnalogInput
+        private set
+    lateinit var relEncoder: DcMotorEx
+        private set
+    private lateinit var tracker: TurretEncoderTracker
+    private var fullScaleVolts = 3.3
+    private var initialEstimate = 0.0
+    private var lastAbsoluteReadNanos = 0L
 
-    private const val PPR = 384.5 //ticks per revolution of motor
-    private const val GEAR_RATIO = 4.5 //turret to motor gear ratio
-
-    // Calibrate this value for your actual encoder installation.
-    // It is the absolute encoder angle when the turret is at 0°.
-    private const val ABS_ZERO_DEGREES = 0.0
-
-    private var initialTicks = 0
-    private var initialDegrees = 0.0
-
-    var trueDegrees = 0.0 //true angle of turret
+    var trueDegrees = 0.0
+        private set
+    var velocityDegreesPerSecond = 0.0
+        private set
+    var absoluteVoltage = 0.0
+        private set
+    var absoluteMotorDegrees = 0.0
         private set
 
     fun init(hardwareMap: HardwareMap) {
-        absEncoder = hardwareMap.get(
-            AnalogInput::class.java, "absEn"
+        absEncoder = hardwareMap.get(AnalogInput::class.java, TurretConfig.ABSOLUTE_ENCODER_NAME)
+        relEncoder = hardwareMap.get(DcMotorEx::class.java, TurretConfig.RELATIVE_ENCODER_NAME)
+        fullScaleVolts = TurretConfig.ABSOLUTE_FULL_SCALE_VOLTS
+        require(fullScaleVolts.isFinite() && fullScaleVolts > 0)
+        initialEstimate = TurretConfig.INITIAL_TURRET_ESTIMATE_DEG
+        require(initialEstimate.isFinite())
+        tracker = TurretEncoderTracker(
+            TurretConfig.TICKS_PER_MOTOR_REV, TurretConfig.MOTOR_REVS_PER_TURRET_REV,
+            TurretConfig.ABSOLUTE_ZERO_DEG, TurretConfig.ABSOLUTE_ENCODER_REVERSED,
+            TurretConfig.RELATIVE_ENCODER_REVERSED
         )
-        relEncoder = hardwareMap.get(
-            DcMotorEx::class.java, "frDrive"
-        )
+        seedAtCurrentPosition()
+    }
 
-        initialTicks = relEncoder.currentPosition
-
-        val absDegrees = absEncoder.voltage / 3.3 * 360.0 //absolute encoder data in degrees
-
-        // Absolute encoder rotates opposite to turret motion.
-        // Normalize to [-180°, 180°).
-        val difference = (
-                (ABS_ZERO_DEGREES - absDegrees + 540.0) % 360.0
-                ) - 180.0
-
-        // Convert motor-side angle to turret angle.
-        initialDegrees = difference / GEAR_RATIO
-
-        trueDegrees = initialDegrees //this is the initial angle of turret
+    fun seedAtCurrentPosition() {
+        readAbsolute()
+        val ticks = relEncoder.currentPosition
+        tracker.seed(absoluteMotorDegrees, ticks, initialEstimate)
+        trueDegrees = tracker.positionDegrees(ticks)
+        velocityDegreesPerSecond = 0.0
     }
 
     fun update() {
-        //difference in relative encoder reading from start
-        val deltaTicks = relEncoder.currentPosition - initialTicks
+        // Absolute angle seeds startup; relative feedback remains fresh every loop.
+        val now = System.nanoTime()
+        if (now - lastAbsoluteReadNanos >= 100_000_000L) readAbsolute()
+        trueDegrees = tracker.positionDegrees(relEncoder.currentPosition)
+        velocityDegreesPerSecond = tracker.velocityDegreesPerSecond(relEncoder.velocity)
+    }
 
-        //updated turret angle
-        trueDegrees = initialDegrees +
-                deltaTicks * 360.0 / (PPR * GEAR_RATIO)
+    private fun readAbsolute() {
+        absoluteVoltage = absEncoder.voltage
+        absoluteMotorDegrees = absoluteVoltage / fullScaleVolts * 360.0
+        lastAbsoluteReadNanos = System.nanoTime()
     }
 }

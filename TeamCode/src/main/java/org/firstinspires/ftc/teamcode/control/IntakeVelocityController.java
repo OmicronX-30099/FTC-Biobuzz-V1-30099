@@ -7,10 +7,10 @@ package org.firstinspires.ftc.teamcode.control;
  * accordingly. Feedback can command opposite power to reduce overspeed.
  */
 public final class IntakeVelocityController {
-    // Initial estimates only, copied from the shooter; tune for the intake motor and gearing.
-    public static final double DEFAULT_KP = 0.003;
-    public static final double DEFAULT_KS = 0.04;
-    public static final double DEFAULT_KV = 0.00038;
+    // Tuned intake gains, shared by Rollers and IntakeTest.
+    public static final double DEFAULT_KP = 0.0006;
+    public static final double DEFAULT_KS = 0.03;
+    public static final double DEFAULT_KV = 0.00035;
 
     private IntakeVelocityController() { }
 

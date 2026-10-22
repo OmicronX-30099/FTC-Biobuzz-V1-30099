@@ -22,31 +22,170 @@ configure the robot's drivetrain, localizer, follower, and tuning entry point be
 The Sloth Load plugin is installed in `TeamCode/build.gradle`. Perform a full
 Android Studio installation to the robot first. After that, run
 `./gradlew.bat :TeamCode:deploySloth` to hot reload TeamCode on an ADB-connected robot.
+`TeamCode/build.gradle` includes a compatibility override for Load 0.3.2 with
+AGP 9.4: `assembleSloth` compiles the complete Java/Kotlin class bundle directly
+with D8 and the project's minimum Android API. This avoids the intermediate DEX
+merge error `Attempt at compiling intermediate artifact without its context`
+in the Pedro tuning procedures. The deployment task and `to_load.jar` output
+stay the same. Use `:TeamCode:assembleSloth` to check packaging without deploying.
 Before a subsequent full installation, run `./gradlew.bat :TeamCode:removeSlothRemote`
 (or add it as the first "Before launch" Gradle task in Android Studio's TeamCode
 run configuration). Changes to libraries or other files outside hot-reloaded
 TeamCode require a full installation. See [Sloth's setup instructions](https://github.com/Dairy-Foundation/Sloth#installation).
 
+### TeleOp drive
+
+`TeleOpRed` creates its own follower with `Constants.create(hardwareMap)` and
+calls `follower.manual(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+gamepad1.right_stick_x)` followed by `follower.update()` every loop. Controls
+are robot-centric. The shooter receives `follower.pose()` from that same update.
+Drivetrain and localization configuration live in `pedro/Constants.java`.
+All four drive motors use BRAKE at initialization and in manual driving.
+Press gamepad1 Circle to reset X, Y, and heading to `(8.2, 7.3, 90 degrees)`.
+The reset occurs once per press. TeleOp automatically selects flywheel TPS and
+hood position from distance to the active goal. In source,
+`Flywheel.AUTO_DISTANCE_SHOT` defaults to true; set it false to use the
+manual `TARGET_VELOCITY_TPS` and `HOOD_POSITION` settings instead. In manual mode,
+set target TPS to 0 to stop the flywheel. `ShotCalibration` stores the paired
+distance/TPS/hood table. See [distance shooting calibration](doc/DistanceShooting.md)
+for data, interpolation, range limits, and tuning instructions. Shooter Test
+retains its separate manual controls. TeamCode settings are source-only;
+Dashboard configuration access is disabled for production and test OpModes.
+Edit source values and rebuild/reinstall to change them. Dashboard telemetry remains available.
+
+Four digital inputs `bb1`, `bb2`, `bb3`, and `bb4` each monitor one ball slot.
+`false` means blocked. TeleOp reports the number of occupied slots; when all
+four are occupied, both gamepads rumble once for 200 ms without stopping the
+intake. Both blocked and clear transitions require 40 ms to filter flicker.
+After a confirmed clear slot, the full alert can trigger again. Configure names,
+polarity and debounce in `Subsystem/Breakbeams.kt` before building.
+
+TeleOp uses a `LinearOpMode` control loop and MANUAL Lynx bulk caching, cleared once at START and once per loop,
+and restores previous cache modes on STOP. Relative turret and flywheel feedback
+remain at full loop rate; absolute turret diagnostics refresh at 10 Hz, and
+turret battery compensation samples at 4 Hz. Status telemetry runs at 5 Hz and
+shows actual start-to-start loop time, rolling average/max over 100 loops,
+loops over 20 ms, time between iterations, control/drive/shooter/input/intake
+times, and the previous telemetry cost. Exact duplicate turret/flywheel motor
+commands are skipped; hood commands accumulate until changing by at least 0.001
+servo units. All feedback controllers and localization still run every loop.
+Verify the 20 ms goal on the robot while driving, aiming, and feeding; desktop
+tests cannot measure hub, Pinpoint, or Android scheduling latency. See
+[loop timing checks](doc/TeleOpLoopTiming.md).
+
+Both Pinpoint pod encoder directions are REVERSED for the installed pod orientation.
+At the 90-degree starting heading, pushing the robot forward should increase
+field Y, and pushing it right should increase field X.
+
+TeleOp starts at `(8.2, 7.3)` inches with a 90-degree field heading and aims the
+turret at the active alliance's goal 1. Goal selection is automatic: measured
+robot Y above `70.75` inches selects goal 2; Y at or below `70.75` selects goal 1.
+Cross no longer toggles the goal in TeleOp. The default goal 2 is reflected across
+`y = 70.75` inches. `Util/Alliance.kt` stores the alliance goal poses, and
+`Util/CurrAlliance.kt` stores the active alliance and goal selection. Each INIT
+selects red goal 1; telemetry shows the selected goal and its coordinates.
+Edit `RedAlliance` in `Util/Alliance.kt`: `GOAL_1_X`, `GOAL_1_Y`, `GOAL_2_X`,
+and `GOAL_2_Y` use inches. Both goals can be edited independently; changing goal 1
+does not automatically mirror goal 2. `BlueAlliance` defines the equivalent blue
+settings. INIT resets selection to red goal 1.
+The turret starts tracking after START. Shooting uses a fixed half-second
+translation lead: `(x + vx * 0.5, y + vy * 0.5)`, with field velocity in inches
+per second and the robot's current heading. This predicted position drives
+turret aiming and the TPS/hood distance interpolation; it does not modify the
+localizer pose or use projectile time of flight. Goal selection still uses
+measured Y before the lead. Each press of gamepad 1 D-pad left adds 2 degrees
+of left trim; D-pad right adds 2 degrees right. Holding a button does not repeat.
+Trim accumulates, applies to either goal, resets at INIT, and respects turret
+travel limits. Telemetry shows the predicted shooting position and trim.
+Its software
+PD plus friction controller and calibration are in `TurretConfig.java`;
+the motor runs in `RUN_WITHOUT_ENCODER`. Target selection chooses the nearest
+360-degree equivalent inside the -230 to +270 degree travel limits.
+The calibrated turret encoder is clockwise-positive, so
+`TurretConfig.CLOCKWISE_POSITIVE = true` converts Pedro's counterclockwise field
+bearings into turret angles. From the configured starting pose, the encoder
+target is approximately +48.55 degrees. This conversion preserves the tuned
+motor and encoder feedback directions.
+
+Before INIT, start the turret near forward, or set
+`TurretConfig.INITIAL_TURRET_ESTIMATE_DEG` within 40 degrees of its actual angle.
+The motor-side absolute encoder cannot distinguish revolutions on its own.
+The angle is seeded again at START, then tracked with the `frDrive` encoder
+signal. Driver Station telemetry shows the measured/target turret angles and power.
+
+### Turret test
+
+Select `Turret Test` in the Tests group. It controls the motor named `turret`,
+reads the motor-side analog absolute encoder `absEn`, and reads the relative
+encoder through `frDrive`, matching the existing wiring. The test does not
+command the `frDrive` motor output or reset its encoder.
+
+Before building, set the hardware/calibration fields in `tests/TurretTest.java`.
+Defaults are 384.5 ticks per motor revolution, a 4.5:1 reduction, 3.3 V absolute
+full scale, and reversed absolute encoder direction. Set `ABSOLUTE_ZERO_DEG`
+to the raw absolute reading with the turret facing forward. The absolute reading
+repeats every 80 turret degrees, so set `INITIAL_TURRET_ESTIMATE_DEG` within
+40 degrees of the actual starting angle to select the correct revolution.
+INIT telemetry shows the estimated angle; START seeds the angle and relative
+tick baseline from the current readings. Subsequent angle tracking uses relative
+encoder deltas, so crossing the absolute encoder's wrap does not jump the target.
+
+Set `TARGET_DEG`, `kP`, `kD`, and `kS` in source before building. The shared controller is:
+
+`power = clip((kP * error - kD * measuredVelocity + kS * sign(error) * min(abs(error) / FRICTION_RAMP_DEG, 1)) * 12 / batteryVoltage, -MAX_POWER, MAX_POWER)`
+
+Angles use turret degrees and velocity uses turret degrees/second. D damps
+measured motion without a kick when changing the target. Friction ramps down
+over the last 5 degrees by default, with zero output inside `DEADBAND_DEG`.
+The completed gains are `kP = 0.04`, `kD = 0.00125`, `kS = 0.05`, with
+`ABSOLUTE_ZERO_DEG = 0`, `DEADBAND_DEG = 0.21`, and `FRICTION_RAMP_DEG = 5`.
+`MAX_POWER` is 1.0; target limits are -230 through +270 degrees.
+The test loads its defaults from `TurretConfig` and uses the same encoder tracker
+and controller as the robot. Source settings under `TurretTest` apply to the test;
+edits under `TurretConfig` apply to the robot. Verify that positive motor
+power increases the reported turret angle; motor and relative encoder reversal
+are independent calibration settings. Telemetry includes raw absolute voltage
+and motor angle, relative ticks, tracked turret angle/velocity, target/error,
+P/D/friction terms before deadband and output limiting, final power, and battery
+voltage. STOP sets turret motor power to zero.
+
+### Intake controller test
+
+Select `Intake Test` in the Tests group. It controls `left_intake` (FORWARD)
+and `right_intake` (REVERSE), matching `Rollers`. Only the left motor needs encoder
+feedback. Configure names, reversal flags, `TARGET_VELOCITY_TPS`, `kP`, `kS`, and
+`kV` in `tests/IntakeTest.java` before building; names/directions are captured at INIT.
+The default target is 1100 TPS. Positive targets collect, negative targets eject,
+and zero stops both motors.
+Power is calculated from the left motor's TPS and sent to both motors; telemetry
+reports left velocity/error, shared power and each motor's current. STOP zeros
+both motors. Tuned defaults are `kP = 0.0006`, `kS = 0.03`, and `kV = 0.00035`;
+TeleOp's `Rollers` uses the same controller and gains with left-motor feedback.
+
+`Intake Motor Power Test` uses the same two motor names and directions. Change
+`MOTOR_POWER` in `tests/IntakeMotorPowerTest.java` to apply a common signed power to both
+motors and measure their velocities before tuning the velocity controller.
+
 ### Shooter test
 
 `Shooter Test` (Tests group) uses one encoder-equipped flywheel motor named
 `shooter` and one positional hood servo named `hood`. Change `MOTOR_NAME` and
-`HOOD_NAME` in Dashboard's `ShooterTest` configuration before INIT if your robot
+`HOOD_NAME` in `tests/ShooterTest.java` before building if your robot
 uses different names. This test follows the direct `init()`/`loop()` structure of
 [16010-Worlds' testing OpModes](https://github.com/BaronClaps/16010-Worlds/tree/7ba5437c9a6f1892af06132384047ef8490efe1d/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/test).
 
-Press INIT, then START. In Dashboard, save changes to `HOOD_POSITION` (0–1)
-to command the hood live. Shooter Test always uses software velocity control;
+Set `HOOD_POSITION` (0.16–0.485) in source, then build, INIT and START.
+Shooter Test always uses software velocity control;
 there is no mode selector or flywheel enable toggle. The separate
 `Shooter Motor Power Test` OpMode provides direct motor-power testing.
 
 Set `TARGET_VELOCITY_TPS` (defaults to 1500 ticks/s) and tune `kP`, `kS`, and `kV`
-live. The calculation is ported from [FTC-Decode-v3's Flywheel.calculatePow()](https://github.com/OmicronX-30099/FTC-Decode-v3/blob/f68882b17f6c3be14384867a75702066da4f1bb2/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Systems/Shooter/ShooterUtil.kt):
+in source before building. The calculation is ported from [FTC-Decode-v3's Flywheel.calculatePow()](https://github.com/OmicronX-30099/FTC-Decode-v3/blob/f68882b17f6c3be14384867a75702066da4f1bb2/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Systems/Shooter/ShooterUtil.kt):
 
 `power = clip(kP * (targetTPS - measuredTPS) + kV * targetTPS + kS * sign(targetTPS), 0, 1)`
 
 Starting gains are `kP = 0.003`, `kS = 0.09`, and `kV = 0.0004`, as in last
-season's controller. INIT preserves these Dashboard settings. These gains are in
+season's controller. INIT uses the source-defined settings. These gains are in
 motor-power units and differ from REV Hub PIDF gains. `RUN_WITHOUT_ENCODER`
 allows direct `setPower()` output while `getVelocity()` still reads the encoder.
 A connected encoder is required. The controller lives in
@@ -72,7 +211,7 @@ recovery band. `Last recovery (ms)` includes the settling period and remains vis
 until the next recovery completes. `Recovery elapsed (ms)` shows an active timer;
 `Completed recoveries` and `Last velocity drop (ticks/s)` provide context.
 
-These three thresholds are live Dashboard controls; the drop threshold must be
+These three thresholds are configured in source; the drop threshold must be
 greater than the tolerance. Initial spin-up is excluded. Changing the target or
 thresholds clears the measurements and requires rearming. With no ball sensor,
 any qualifying velocity disturbance can trigger the timer. Shots fired before
@@ -94,31 +233,41 @@ Measured positions are stored in `Util/ServoPositions.kt`:
 | Left flower | Down / Up | 0.5 / 0.83 |
 | Right flower | Down / Up | 0.49 / 0.82 |
 
-`TeleOpBlue` initializes the hood to 0.35, closes the gate, and raises the
+`TeleOpRed` initializes the hood from `Flywheel.HOOD_POSITION` in source
+(default 0.35), closes the gate, and raises the
 left flower. Only `left_flower` is currently used to operate the flower intake;
 `right_flower` is not initialized or commanded, and its calibration is retained.
 Each press of gamepad 1's right bumper toggles the left flower: first down, then up.
 Holding the bumper does not repeatedly toggle it. Gamepad 1's left bumper
 holds the shooting gate open at 0.75; releasing it closes the gate at 0.87 on the
 next control loop, with no timed sequence. STOP also closes the gate.
-While the left bumper is held, trigger-controlled intake power is capped at
-0.5 in either direction; releasing it restores the normal maximum of 1.0.
-The hood maximum is recorded for future use; no
-hood adjustment button is assigned. The shooter test modes also default their
+The intake targets -2000 ticks/s when gamepad 1's left trigger is greater than
+0.2; otherwise, the right trigger above 0.2 requests 2800 ticks/s, and releasing
+both triggers requests 0. Opening the gate with the left bumper overrides either
+trigger with 1100 ticks/s by default, even with both triggers released. Change
+`Rollers.GATE_OPEN_TPS` in source to adjust this target before building. Both intake motors receive
+the same controller output, calculated from the left encoder. Telemetry reports
+the target, measured intake velocity and output power.
+With `Flywheel.AUTO_DISTANCE_SHOT = false`, change `Flywheel.HOOD_POSITION`
+in source to configure the manual hood position (0.16–0.485). In auto mode, hood position follows
+the distance calibration instead.
+INIT preserves that setting; telemetry shows the commanded position. Values
+outside 0.16–0.485 are clipped to the calibrated maximum/15-degree hood positions,
+and non-finite live edits are ignored. Shooter test modes use the same limits and default their
 hood position to 0.35.
 
 ### Servo test
 
-Select `Servo Test` in the Tests group and press INIT. In Dashboard, open
-`ServoTest`, set `SERVO_NAME` and `SERVO_NAME_2` to the two positional servos'
-robot configuration names, and save. The first name defaults to `hood`; the
+Before building, open `tests/ServoTest.java` and set `SERVO_NAME` and `SERVO_NAME_2`
+to the two positional servos' robot configuration names. Select `Servo Test`
+in the Tests group and press INIT. The first name defaults to `hood`; the
 second defaults to blank. Leave either name blank to disable that slot. The
 selections update during INIT; telemetry shows each selected name and connection
 or reports that the name was not found. If both names select the same servo,
 only the first slot commands it.
 
-Press START, then change `POSITION` and `POSITION_2` independently from 0 to 1.
-`REVERSED` and `REVERSED_2` change each servo's direction live.
+Set `POSITION` and `POSITION_2` independently from 0 to 1 in source before building,
+then press START. `REVERSED` and `REVERSED_2` configure each servo's direction.
 Positions outside 0–1 are clipped; non-finite values are
 ignored. No position is commanded before START. To select another servo after
 START, stop and press INIT again. Telemetry appears on Driver Station and

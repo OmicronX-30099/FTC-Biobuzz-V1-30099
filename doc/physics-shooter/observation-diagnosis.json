@@ -1,0 +1,44 @@
+{
+  "status": "DIAGNOSTIC ONLY; does not update calibration or LUT",
+  "assumptions": {
+    "cd": 0.47,
+    "target_height_m": 1.04,
+    "landing_bearing_unchanged": true,
+    "landing_x_measured": false
+  },
+  "requested_range_in": 51.429222237945616,
+  "observed_range_in_assuming_same_bearing": 63.454761342687384,
+  "overshoot_y_in": 12.0,
+  "nominal_lut": {
+    "launch_deg": 71.52831110482175,
+    "hood_deg": 18.471688895178247,
+    "tps": 1570.40722715715,
+    "exit_mps": 5.638760386532179,
+    "vertex_cm": 136.06387298376208,
+    "entry_deg": 57.01246982142065,
+    "flight_s": 0.7768771244394299
+  },
+  "speed_only_explanation": {
+    "launch_deg": 71.52831110482175,
+    "exit_mps": 6.118753188188504,
+    "exit_speed_ratio": 1.085123816007993,
+    "vertex_in": 62.35506143016438,
+    "entry_deg": 62.07267705145477,
+    "flight_s": 0.895086468945718
+  },
+  "range_and_peak_explanation": {
+    "launch_deg": 75.17180261792817,
+    "exit_mps": 6.628527083548727,
+    "launch_offset_deg": 3.6434915131064116,
+    "exit_speed_ratio": 1.1755291285972256,
+    "vertex_in": 74.99980568281806,
+    "entry_deg": 70.14281847481718,
+    "flight_s": 1.0365024061759769
+  },
+  "reported_entry_deg": 60.0,
+  "reported_flight_s": [
+    0.87,
+    0.97
+  ],
+  "note": "Peak/range/time/angle are approximate observations across inconsistent shots; do not fit them as one exact trajectory."
+}

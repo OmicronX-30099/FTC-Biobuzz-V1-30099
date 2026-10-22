@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.tests;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -18,11 +17,10 @@ import org.firstinspires.ftc.teamcode.Util.ServoPositions;
 
 /**
  * Follows the direct init/loop structure of 16010-Worlds' testing OpModes.
- * Press START, then edit ShooterTest in Dashboard and save the changes.
+ * Edit ShooterTest.java settings before building, then press START to test them.
  * Uses last season's software P + static/velocity feedforward controller.
  */
 @TeleOp(name = "Shooter Test", group = "Tests")
-@Config
 public class ShooterTest extends OpMode {
     // Hardware names are read at INIT. All other controls are read every loop.
     public static String MOTOR_NAME = "shooter";
@@ -74,7 +72,7 @@ public class ShooterTest extends OpMode {
     private void showInitTelemetry() {
         telemetryM.addData("Test version", "Shooter Test v6");
         telemetryM.addLine("Press START to command the motor and hood.");
-        telemetryM.addLine("Change TARGET_VELOCITY_TPS, HOOD_POSITION, kP, kS, and kV in Dashboard.");
+        telemetryM.addLine("Target, hood position and gains are configured in ShooterTest.java.");
         telemetryM.addData("Motor connection", flywheel.getConnectionInfo());
         telemetryM.addData("Hood connection", hood.getConnectionInfo());
         telemetryM.update();
@@ -83,7 +81,7 @@ public class ShooterTest extends OpMode {
     @Override
     public void loop() {
         // Command the hood directly each loop, like the reference's servo tests.
-        hood.setPosition(Range.clip(HOOD_POSITION, 0.0, 1.0));
+        hood.setPosition(ServoPositions.clipHoodPosition(HOOD_POSITION));
 
         double velocity = flywheel.getVelocity();
         double target = TARGET_VELOCITY_TPS;

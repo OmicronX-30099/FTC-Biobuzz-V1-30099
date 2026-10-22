@@ -1,0 +1,6 @@
+robot_x_in,robot_y_in,tps,hood_servo,measured_hood_deg,include_in_fit,note
+8.2,7.3,1600,0.25,,true,Screenshot; physical hood angle was not measured
+31.9,7.47,1540,0.25,,true,Screenshot; physical hood angle was not measured
+55.76,7.56,1480,0.30,,true,Screenshot; physical hood angle was not measured
+79.5,7.67,1540,0.30,,false,Previously removed 56.45-inch row; diagnostic comparison only
+79.43,31.51,1440,0.485,15,true,User confirmed 15-degree hood / 75-degree launch
