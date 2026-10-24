@@ -45,7 +45,8 @@ object Turret {
         active = true
     }
 
-    fun update(pose: Pose) {
+    @JvmOverloads
+    fun update(pose: Pose, aimOffsetDegrees: Double = 0.0) {
         if (!active) return
         Encoders.update()
         val now = System.nanoTime()
@@ -58,9 +59,10 @@ object Turret {
         val goal = CurrAlliance.CurrGoal
         val minAngle = TurretConfig.MIN_ANGLE_DEG
         val maxAngle = TurretConfig.MAX_ANGLE_DEG
+        val safeAimOffsetDegrees = if (aimOffsetDegrees.isFinite()) aimOffsetDegrees else 0.0
         targetDegrees = TurretAiming.targetDegrees(
             pose.x(), pose.y(), pose.heading(), goal.x(), goal.y(), current, minAngle, maxAngle,
-            TurretConfig.CLOCKWISE_POSITIVE
+            TurretConfig.CLOCKWISE_POSITIVE, safeAimOffsetDegrees
         )
         var power = TurretPositionController.calculate(
             targetDegrees, current, Encoders.velocityDegreesPerSecond,

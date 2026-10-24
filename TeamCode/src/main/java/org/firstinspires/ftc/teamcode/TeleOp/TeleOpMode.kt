@@ -14,7 +14,6 @@ import org.firstinspires.ftc.teamcode.Subsystem.Shooter
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
-import org.firstinspires.ftc.teamcode.experimental.physics.PhysicsShooter
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.control.ShootingOffsets
@@ -121,14 +120,9 @@ class TeleOpMode: LinearOpMode() {
         val driveStart = System.nanoTime()
         follower.update()
         val driveEnd = System.nanoTime()
-        var pose = follower.pose()
-        val headingDelta = shootingOffsets.update(gamepad1.dpad_left, gamepad1.dpad_right,
+        val pose = follower.pose()
+        shootingOffsets.update(gamepad1.dpad_left, gamepad1.dpad_right,
             gamepad1.dpad_up, gamepad1.dpad_down)
-        if (headingDelta != 0.0) {
-            // Correct localization once per press while keeping the robot's current X/Y.
-            follower.setHeading(pose.heading() + Math.toRadians(headingDelta))
-            pose = follower.pose()
-        }
         CurrAlliance.SelectGoalForY(pose.y())
 
         val shooting = gamepad1.left_bumper
@@ -140,7 +134,7 @@ class TeleOpMode: LinearOpMode() {
 
         val shooterStart = System.nanoTime()
         // Aim from the current pose; do not lead for robot translation or rotation.
-        Shooter.update(pose, shootingOffsets.velocityTPS)
+        Shooter.update(pose, shootingOffsets.velocityTPS, shootingOffsets.aimOffsetDegrees)
         val controlEnd = System.nanoTime()
         lastControlMs = (controlEnd - loopStartNanos) / 1_000_000.0
 
@@ -160,21 +154,16 @@ class TeleOpMode: LinearOpMode() {
             telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
             telemetry.addData("Shot settings", Flywheel.shotStatus)
             if (Flywheel.AUTO_DISTANCE_SHOT) {
-                telemetry.addData("LUT model height / entry", "%.0f cm / %.0f deg",
-                    PhysicsShooter.TARGET_HEIGHT_CM, PhysicsShooter.PREFERRED_ENTRY_DEGREES)
-                telemetry.addData("LUT / commanded TPS (trim, then x0.95)", "%.1f / %.1f",
-                    Flywheel.rawLutVelocityTPS, Flywheel.flyWheelVelo)
-                telemetry.addData("LUT hood / entry (deg)", "%.1f / %.1f",
-                    Flywheel.calculatedHoodAngleDegrees, Flywheel.predictedEntryAngleDegrees)
-                telemetry.addData("LUT vertex (cm) / height OK", "%.1f / %s",
-                    Flywheel.predictedVertexHeightCm, Flywheel.lutHeightFeasible)
+                telemetry.addData("Calibrated / commanded TPS", "%.1f / %.1f",
+                    Flywheel.calibratedVelocityTPS, Flywheel.flyWheelVelo)
+                telemetry.addData("Calibration endpoint held", Flywheel.shotClamped)
             }
             telemetry.addData("Intake target / measured (ticks/s)", "%.1f / %.1f",
                 Rollers.targetVelocityTPS, Rollers.measuredVelocityTPS)
             telemetry.addData("Intake power", "%.3f", Rollers.intakePower)
             telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f", Encoders.trueDegrees, Turret.targetDegrees)
             telemetry.addData("Turret power", "%.3f", Turret.motorPower)
-            telemetry.addData("Heading correction (deg)", "%.1f", shootingOffsets.headingDegrees)
+            telemetry.addData("Aim offset (deg)", "%.1f", shootingOffsets.aimOffsetDegrees)
             telemetry.addData("Shooter trim (ticks/s)", "%.0f", shootingOffsets.velocityTPS)
             telemetry.addData("Flowers", if (Flowers.isDown) "Down" else "Up")
             telemetry.addData("Balls", "%d / 4", Breakbeams.ballCount)
