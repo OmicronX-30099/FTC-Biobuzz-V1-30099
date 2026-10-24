@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.Util
 
 import com.pedropathing.math.Pose
 
-object CurrAlliance {
+object  CurrAlliance {
     private var goalOverride: Pose? = null
     var useGoal1: Boolean = true
         private set

@@ -11,7 +11,7 @@ using field velocity in inches/second. Turret heading is predicted separately as
 `heading + angularVelocity * 0.05`, using counterclockwise-positive radians/second
 from Pedro's Pinpoint velocity. This 50 ms lead anticipates turret response during
 rotation, following Meta Infinity's approach. Edit `ANGULAR_LEAD_SECONDS` in
-`control/ShootingPosePrediction.java` to tune it; Dashboard access remains disabled.
+`control/ShootingPosePrediction.java` to tune it.
 Both turret
 aiming and this distance table use that predicted position. The localizer pose
 stays measured, and goal selection uses measured Y. This is the requested fixed
@@ -67,7 +67,10 @@ positions, not a linear conversion to hood or launch angle.
 
 ## Operating and adjusting it
 
-- Dashboard configuration access is disabled. Edit settings in source and rebuild/reinstall.
+- `Flywheel` is available in the FTC Dashboard config page. Set
+  `TARGET_VELOCITY_TPS` there for manual mode; `AUTO_DISTANCE_SHOT` selects
+  whether the automatic distance-based velocity or that fixed target is used. The current
+  TeleOp telemetry, including distance to goal, is also sent to FTC Dashboard.
 - `Flywheel.AUTO_DISTANCE_SHOT` defaults to `true` in source.
 - In auto mode, `ShotCalibration` stores `DISTANCE_INCHES`, `VELOCITY_TPS`, and
   `HOOD_POSITIONS` arrays. The same index in each array represents one shot.
@@ -81,7 +84,7 @@ positions, not a linear conversion to hood or launch angle.
   do not override the calculated shot.
 - All hood commands are clipped to the calibrated servo range `0.16–0.485`
   (`HOOD_MAX` through `HOOD_15_DEGREES`), including manual commands and INIT.
-- TeleOp telemetry shows distance, mode/range status, target and measured TPS,
+- TeleOp telemetry shows distance to the selected goal, mode/range status, target and measured TPS,
   and commanded hood position. Invalid pose/table input stops the flywheel
   and retains the last valid hood command.
 - Edit source defaults in `ShotCalibration` or `Flywheel` to change settings.

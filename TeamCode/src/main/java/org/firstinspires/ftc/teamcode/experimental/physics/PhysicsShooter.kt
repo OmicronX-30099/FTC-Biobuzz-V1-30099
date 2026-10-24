@@ -35,7 +35,7 @@ class PhysicsShot {
     }
 }
 
-/** Experimental system only. Production Flywheel/TeleOp never reference this object. */
+/** Precomputed physics LUT used by the live flywheel subsystem. */
 object PhysicsShooter {
     const val MIN_DISTANCE_IN = 35.0
     const val MAX_DISTANCE_IN = 75.0
@@ -69,8 +69,8 @@ object PhysicsShooter {
         result.entryAngleErrorDegrees = abs(result.entryAngleDegrees - PREFERRED_ENTRY_DEGREES)
         // Conservative at a feasibility boundary; do not interpolate booleans into a claim.
         result.heightConstraintSatisfied = PhysicsShotTable.feasible[low] &&
-            (fraction == 0.0 || PhysicsShotTable.feasible[high]) &&
-            result.vertexHeightCm >= REQUIRED_VERTEX_CM
+                (fraction == 0.0 || PhysicsShotTable.feasible[high]) &&
+                result.vertexHeightCm >= REQUIRED_VERTEX_CM
         result.feasible = result.heightConstraintSatisfied
         result.valid = true // descending fallback is a valid trajectory, but not height-feasible
         result.status = when {

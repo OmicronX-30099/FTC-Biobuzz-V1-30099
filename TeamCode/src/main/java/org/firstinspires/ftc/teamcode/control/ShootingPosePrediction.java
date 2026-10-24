@@ -4,7 +4,7 @@ import com.pedropathing.math.Pose;
 
 /** Separate translation and turret-response leads; neither uses projectile time of flight. */
 public final class ShootingPosePrediction {
-    public static final double LEAD_SECONDS = 0.6;
+    public static final double LEAD_SECONDS = 0.7;
     public static final double ANGULAR_LEAD_SECONDS = 0.05;
 
     private ShootingPosePrediction() { }

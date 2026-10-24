@@ -27,22 +27,22 @@ open class Alliance(
     }
 }
 
-object RedAlliance: Alliance(57.9, 56.0) {
-    @JvmField @Volatile var GOAL_1_X = 56.0
-    @JvmField @Volatile var GOAL_1_Y = 59.0
-    @JvmField @Volatile var GOAL_2_X = 56.0
-    @JvmField @Volatile var GOAL_2_Y = 141.5-59.0
+object RedAlliance: Alliance(58.5, 53.0) {
+    @JvmField @Volatile var GOAL_1_X = 58.5
+    @JvmField @Volatile var GOAL_1_Y = 53.0
+    @JvmField @Volatile var GOAL_2_X = 58.5
+    @JvmField @Volatile var GOAL_2_Y = 141.5-53.0
 
     override val GoalPose1: Pose get() = goal1At(GOAL_1_X, GOAL_1_Y)
     override val GoalPose2: Pose get() = goal2At(GOAL_2_X, GOAL_2_Y)
 }
 
 // Defaults are mirrored across y = 70.75; edit each goal's coordinates in source.
-object BlueAlliance: Alliance(141.5-57.9, 56.0) {
-    @JvmField @Volatile var GOAL_1_X = 141.5-56.0
-    @JvmField @Volatile var GOAL_1_Y = 59.0
-    @JvmField @Volatile var GOAL_2_X = 141.5-56.0
-    @JvmField @Volatile var GOAL_2_Y = 141.5-59.0
+object BlueAlliance: Alliance(141.5-58.5, 53.0) {
+    @JvmField @Volatile var GOAL_1_X = 141.5-58.5
+    @JvmField @Volatile var GOAL_1_Y = 53.0
+    @JvmField @Volatile var GOAL_2_X = 141.5-58.5
+    @JvmField @Volatile var GOAL_2_Y = 141.5-53.0
 
     override val GoalPose1: Pose get() = goal1At(GOAL_1_X, GOAL_1_Y)
     override val GoalPose2: Pose get() = goal2At(GOAL_2_X, GOAL_2_Y)

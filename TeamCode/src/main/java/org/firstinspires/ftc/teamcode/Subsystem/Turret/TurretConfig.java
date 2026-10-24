@@ -23,8 +23,8 @@ public final class TurretConfig {
     // The calibrated turret angle increases clockwise; Pedro heading increases counterclockwise.
     public static volatile boolean CLOCKWISE_POSITIVE = true;
 
-    public static volatile double kP = 0.04;
-    public static volatile double kD = 0.00125;
+    public static volatile double kP = 0.035;
+    public static volatile double kD = 0.001;
     public static volatile double kS = 0.05;
     public static volatile double DEADBAND_DEG = 0.21;
     public static volatile double FRICTION_RAMP_DEG = 5.0;

@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.TeleOp
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.hardware.lynx.LynxModule
+import com.acmerobotics.dashboard.FtcDashboard
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
 import org.firstinspires.ftc.teamcode.Subsystem.Breakbeams
 import com.pedropathing.follower.Follower
 import com.pedropathing.math.Pose
@@ -12,9 +14,9 @@ import org.firstinspires.ftc.teamcode.Subsystem.Shooter
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
+import org.firstinspires.ftc.teamcode.experimental.physics.PhysicsShooter
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.pedro.Constants
-import org.firstinspires.ftc.teamcode.control.ShootingPosePrediction
 import org.firstinspires.ftc.teamcode.control.ShootingOffsets
 
 @TeleOp(name = "TeleOpRed", group = "Red")
@@ -60,6 +62,7 @@ class TeleOpMode: LinearOpMode() {
 
     private fun initializeRobot() {
         telemetry.msTransmissionInterval = TELEMETRY_INTERVAL_MS
+        telemetry = MultipleTelemetry(telemetry, FtcDashboard.getInstance().telemetry)
         follower = Constants.create(hardwareMap)
         resetPoseToStart()
         CurrAlliance.Reset()
@@ -93,7 +96,7 @@ class TeleOpMode: LinearOpMode() {
         val previousLoopStartNanos = lastLoopStartNanos
         lastLoopStartNanos = loopStartNanos
         schedulerGapMs = if (previousWorkEndNanos == 0L) 0.0
-            else (loopStartNanos - previousWorkEndNanos) / 1_000_000.0
+        else (loopStartNanos - previousWorkEndNanos) / 1_000_000.0
         if (previousLoopStartNanos != 0L) {
             val sample = (loopStartNanos - previousLoopStartNanos) / 1_000_000.0
             if (loopSampleCount == loopSamples.size) loopSampleSum -= loopSamples[loopSampleIndex]
@@ -122,7 +125,7 @@ class TeleOpMode: LinearOpMode() {
         val headingDelta = shootingOffsets.update(gamepad1.dpad_left, gamepad1.dpad_right,
             gamepad1.dpad_up, gamepad1.dpad_down)
         if (headingDelta != 0.0) {
-            // Correct localization once per press, preserving X/Y and normal SOTM prediction.
+            // Correct localization once per press while keeping the robot's current X/Y.
             follower.setHeading(pose.heading() + Math.toRadians(headingDelta))
             pose = follower.pose()
         }
@@ -136,9 +139,8 @@ class TeleOpMode: LinearOpMode() {
         Flowers.updateToggle(gamepad1.right_bumper)
 
         val shooterStart = System.nanoTime()
-        val velocity = follower.velocity()
-        val shootingPose = ShootingPosePrediction.predict(pose, velocity.vx, velocity.vy, velocity.omega)
-        Shooter.update(shootingPose, shootingOffsets.velocityTPS)
+        // Aim from the current pose; do not lead for robot translation or rotation.
+        Shooter.update(pose, shootingOffsets.velocityTPS)
         val controlEnd = System.nanoTime()
         lastControlMs = (controlEnd - loopStartNanos) / 1_000_000.0
 
@@ -149,24 +151,31 @@ class TeleOpMode: LinearOpMode() {
             val loopTimeMs = (loopStartNanos - previousLoopStartNanos) / 1_000_000.0
             telemetry.addData("Robot position (in)", "x: %.2f, y: %.2f", pose.x(), pose.y())
             telemetry.addData("Robot heading (deg)", "%.1f", Math.toDegrees(pose.heading()))
-            telemetry.addData("Shooting position (+0.5s, in)", "%.2f / %.2f", shootingPose.x(), shootingPose.y())
-            telemetry.addData("Turret angular lead (deg)", "%.2f",
-                Math.toDegrees(velocity.omega * ShootingPosePrediction.ANGULAR_LEAD_SECONDS))
             val goal = CurrAlliance.CurrGoal
             telemetry.addData("Target goal", if (CurrAlliance.useGoal1) 1 else 2)
             telemetry.addData("Goal position (in)", "x: %.2f, y: %.2f", goal.x(), goal.y())
             telemetry.addData("Target flywheel velocity (ticks/s)", "%.1f", Flywheel.flyWheelVelo)
             telemetry.addData("Current flywheel velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
             telemetry.addData("Hood position", "%.3f", Flywheel.hoodPosition)
-            telemetry.addData("Shot distance (in)", "%.2f", Flywheel.distanceToGoalInches)
+            telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
             telemetry.addData("Shot settings", Flywheel.shotStatus)
+            if (Flywheel.AUTO_DISTANCE_SHOT) {
+                telemetry.addData("LUT model height / entry", "%.0f cm / %.0f deg",
+                    PhysicsShooter.TARGET_HEIGHT_CM, PhysicsShooter.PREFERRED_ENTRY_DEGREES)
+                telemetry.addData("LUT / commanded TPS (trim, then x0.95)", "%.1f / %.1f",
+                    Flywheel.rawLutVelocityTPS, Flywheel.flyWheelVelo)
+                telemetry.addData("LUT hood / entry (deg)", "%.1f / %.1f",
+                    Flywheel.calculatedHoodAngleDegrees, Flywheel.predictedEntryAngleDegrees)
+                telemetry.addData("LUT vertex (cm) / height OK", "%.1f / %s",
+                    Flywheel.predictedVertexHeightCm, Flywheel.lutHeightFeasible)
+            }
             telemetry.addData("Intake target / measured (ticks/s)", "%.1f / %.1f",
                 Rollers.targetVelocityTPS, Rollers.measuredVelocityTPS)
             telemetry.addData("Intake power", "%.3f", Rollers.intakePower)
             telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f", Encoders.trueDegrees, Turret.targetDegrees)
             telemetry.addData("Turret power", "%.3f", Turret.motorPower)
             telemetry.addData("Heading correction (deg)", "%.1f", shootingOffsets.headingDegrees)
-            telemetry.addData("Shooter offset (ticks/s)", "%.0f", shootingOffsets.velocityTPS)
+            telemetry.addData("Shooter trim (ticks/s)", "%.0f", shootingOffsets.velocityTPS)
             telemetry.addData("Flowers", if (Flowers.isDown) "Down" else "Up")
             telemetry.addData("Balls", "%d / 4", Breakbeams.ballCount)
             // Start-to-start timing includes the previous loop's telemetry and SDK overhead.
