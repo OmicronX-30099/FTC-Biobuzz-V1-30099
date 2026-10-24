@@ -41,10 +41,10 @@ object Shooter {
     }
 
     @JvmOverloads
-    fun update(pose: Pose, velocityOffsetTPS: Double = 0.0) {
+    fun update(pose: Pose, velocityOffsetTPS: Double = 0.0, aimOffsetDegrees: Double = 0.0) {
         shooterVelocity = shooter.velocity
         shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)
-        Turret.update(pose)
+        Turret.update(pose, aimOffsetDegrees)
     }
 
     fun stop() {

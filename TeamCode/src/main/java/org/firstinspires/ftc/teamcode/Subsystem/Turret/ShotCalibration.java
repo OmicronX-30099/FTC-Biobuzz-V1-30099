@@ -1,15 +1,14 @@
 package org.firstinspires.ftc.teamcode.Subsystem.Turret;
 
 
-/** Paired measured shots, sorted by distance. Recomputed from robot X/Y for confirmed goal (56, 59). */
+/** Paired measured shots sorted by distance from the selected goal, in inches. */
 public final class ShotCalibration {
     private ShotCalibration() { }
 
     // Keep matching indices paired and distances strictly increasing when editing this table.
     public static volatile double[] DISTANCE_INCHES = {
-            36.12014673281381, 51.440559872536376,
-            56.88717693821693, 70.41114968525936
+            23, 28, 38, 48, 58, 68
     };
-    public static volatile double[] VELOCITY_TPS = {1440, 1480, 1540, 1600};
-    public static volatile double[] HOOD_POSITIONS = {0.485, 0.30, 0.25, 0.25};
+    public static volatile double[] VELOCITY_TPS = {1380, 1420, 1410, 1480, 1560, 1580};
+    public static volatile double[] HOOD_POSITIONS = {0.485, 0.45, 0.30, 0.25, 0.20, 0.20};
 }
