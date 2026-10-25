@@ -11,14 +11,32 @@ import com.pedropathing.ivy.pedro.PedroCommands.follow
 import com.pedropathing.paths.Path
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
-import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
 import org.firstinspires.ftc.teamcode.pedro.Constants
 
 @Autonomous(name = "Red Auto Test", group = "Red")
 class RedAuto16P: OpMode()  {
+    private lateinit var follower: Follower
+    private lateinit var fullPathRed: Command
+
     override fun init() {
         Scheduler.reset()
+        follower = Constants.create(hardwareMap)
         follower.setPose(start)
+        fullPathRed = sequential(
+            follow(follower, path1()),
+            follow(follower, path2()),
+            follow(follower, Paths.path(path3(), path4())),
+            follow(follower, openPollenIntake()),
+            follow(follower, path6()),
+            follow(follower, path7()),
+            follow(follower, path8()),
+            follow(follower, path9()),
+            follow(follower, openPollenIntake2()),
+            follow(follower, path11()),
+            follow(follower, path12()),
+            follow(follower, path13()),
+            follow(follower, path14())
+        )
     }
 
     override fun start() {
@@ -40,26 +58,25 @@ class RedAuto16P: OpMode()  {
 
         telemetry.update()
     }
-    val follower = Constants.create(hardwareMap)
     private val poseFactory = PoseFactory.degrees()
 
-    private val start = poseFactory.of(56.0, 7.3, 90.0)
-    private val path1 = poseFactory.of(12.0, 7.3, 180.0)
-    private val point2Start = poseFactory.of(12.0, 7.3, 180.0)
-    private val point2 = poseFactory.of(24.0, 11.0, 90.0)
+    private val start = poseFactory.of(54.4, 7.3, 180.0)
+    private val path1 = poseFactory.of(10.5, 7.3, 180.0)
+    private val point2Start = poseFactory.of(10.5, 7.3, 180.0)
+    private val point2 = poseFactory.of(24.0, 15.0, 90.0)
     private val point3 = poseFactory.of(24.0, 80.0, 90.0)
     private val point4 = poseFactory.of(48.0, 115.0, 36.1373)
     private val point4Control1 = poseFactory.of(24.3341, 97.8072, 0.0)
     private val openPollenIntakeStart = poseFactory.of(48.0, 115.0, 35.0)
     private val openPollenIntake = poseFactory.of(48.0, 123.0, 90.0)
-    private val point6 = poseFactory.of(48.0, 130.0, 90.0)
+    private val point6 = poseFactory.of(48.0, 128.0, 90.0)
     private val point7 = poseFactory.of(29.0, 122.0, 90.0)
     private val point7Control1 = poseFactory.of(30.2702, 124.8823, 0.0)
     private val point8 = poseFactory.of(27.0, 61.5, 90.0)
     private val point9Start = poseFactory.of(27.0, 61.5, 90.0)
     private val point9 = poseFactory.of(27.0, 48.5, 180.0)
-    private val openPollenIntake2 = poseFactory.of(13.0572, 48.5, 180.0)
-    private val point11Start = poseFactory.of(13.0572, 48.5, 180.0)
+    private val openPollenIntake2 = poseFactory.of(14.2, 48.5, 180.0)
+    private val point11Start = poseFactory.of(13.8, 48.5, 180.0)
     private val point11 = poseFactory.of(27.3655, 57.0258, 90.0)
     private val point12 = poseFactory.of(28.0, 111.0, 90.0)
     private val point13Start = poseFactory.of(28.0, 111.0, 90.0)
@@ -99,22 +116,4 @@ class RedAuto16P: OpMode()  {
                 follower.follow(pedroPath)
             }
     }
-    val fullPathRed: Command = sequential(
-        follow(follower, path1()),
-        follow(follower, path2()),
-        follow(follower, path3()),
-        follow(follower, path4()),
-        follow(follower, openPollenIntake()),
-        follow(follower, path6()),
-        follow(follower, path7()),
-        follow(follower, path8()),
-        follow(follower, path9()),
-        follow(follower, openPollenIntake2()),
-        follow(follower, path11()),
-        follow(follower, path12()),
-        follow(follower, path13()),
-        follow(follower, path14())
-
-    )
-
 }

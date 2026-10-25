@@ -44,7 +44,7 @@ object Rollers {
     fun update(rightTrigger: Float, leftTrigger: Float, gateOpen: Boolean) {
         targetVelocityTPS = when {
             gateOpen -> GATE_OPEN_TPS
-            leftTrigger > 0.2f -> -2000.0
+            leftTrigger > 0.2f -> -1200.0
             rightTrigger > 0.2f -> 2800.0
             else -> 0.0
         }

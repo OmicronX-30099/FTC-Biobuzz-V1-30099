@@ -25,6 +25,7 @@ class TeleOpMode: LinearOpMode() {
     private var lastLoopStartNanos = 0L
     private var lastTelemetryNanos = 0L
     private var circleWasPressed = false
+    private var crossWasPressed = false
     private lateinit var hubs: List<LynxModule>
     private lateinit var originalCacheModes: List<LynxModule.BulkCachingMode>
     private var lastControlMs = 0.0
@@ -80,6 +81,7 @@ class TeleOpMode: LinearOpMode() {
         hubs.forEach { it.clearBulkCache() }
         Shooter.start()
         circleWasPressed = gamepad1.circle
+        crossWasPressed = gamepad1.cross
         shootingOffsets.seedButtons(gamepad1.dpad_left, gamepad1.dpad_right,
             gamepad1.dpad_up, gamepad1.dpad_down)
         lastLoopStartNanos = 0L
@@ -115,6 +117,10 @@ class TeleOpMode: LinearOpMode() {
         if (circlePressed && !circleWasPressed) resetPoseToStart()
         circleWasPressed = circlePressed
 
+        val crossPressed = gamepad1.cross
+        if (crossPressed && !crossWasPressed) Shooter.toggleMode()
+        crossWasPressed = crossPressed
+
         follower.manual(-gamepad1.left_stick_y.toDouble(),
             -gamepad1.left_stick_x.toDouble(), -gamepad1.right_stick_x.toDouble())
         val driveStart = System.nanoTime()
@@ -148,12 +154,13 @@ class TeleOpMode: LinearOpMode() {
             val goal = CurrAlliance.CurrGoal
             telemetry.addData("Target goal", if (CurrAlliance.useGoal1) 1 else 2)
             telemetry.addData("Goal position (in)", "x: %.2f, y: %.2f", goal.x(), goal.y())
+            telemetry.addData("Shooting mode (Cross toggles)", Shooter.mode)
             telemetry.addData("Target flywheel velocity (ticks/s)", "%.1f", Flywheel.flyWheelVelo)
             telemetry.addData("Current flywheel velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
             telemetry.addData("Hood position", "%.3f", Flywheel.hoodPosition)
             telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
             telemetry.addData("Shot settings", Flywheel.shotStatus)
-            if (Flywheel.AUTO_DISTANCE_SHOT) {
+            if (Shooter.mode == Shooter.Mode.NORMAL && Flywheel.AUTO_DISTANCE_SHOT) {
                 telemetry.addData("Calibrated / commanded TPS", "%.1f / %.1f",
                     Flywheel.calibratedVelocityTPS, Flywheel.flyWheelVelo)
                 telemetry.addData("Calibration endpoint held", Flywheel.shotClamped)

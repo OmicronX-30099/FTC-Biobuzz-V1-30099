@@ -14,6 +14,8 @@ import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 @Config
 object Flywheel {
     private const val HOOD_COMMAND_EPSILON = 0.001
+    const val BACKUP_TARGET_VELOCITY_TPS = 1480.0
+    const val BACKUP_HOOD_POSITION = 0.35
     private var lastMotorPower = 0.0
     private val distanceShot = DistanceShotInterpolator.Shot()
     @JvmField @Volatile var AUTO_DISTANCE_SHOT: Boolean = true
@@ -70,11 +72,7 @@ object Flywheel {
 
     @JvmOverloads
     fun update(pose: Pose, currentVelocity: Double, velocityOffsetTPS: Double = 0.0): Double {
-        val goal = CurrAlliance.CurrGoal
-        goalTargetX = goal.x()
-        goalTargetY = goal.y()
-        // Field coordinates are inches; use the 2D horizontal distance, not 3D range.
-        distanceToGoalInches = Math.hypot(goalTargetX - pose.x(), goalTargetY - pose.y())
+        updateDistanceToGoal(pose)
 
         var requestedHoodPosition = HOOD_POSITION
         val baseVelocityTPS: Double
@@ -106,16 +104,38 @@ object Flywheel {
             return stopInvalidShot("Shooter TPS overflow - shooter stopped")
         }
 
-        if (requestedHoodPosition.isFinite()) {
-            val position = ServoPositions.clipHoodPosition(requestedHoodPosition)
-            if (kotlin.math.abs(position - hoodPosition) >= HOOD_COMMAND_EPSILON) {
-                hood.position = position
-                hoodPosition = position
-            }
-        }
+        setHoodPosition(requestedHoodPosition)
         val power = calculate(flyWheelVelo, currentVelocity, DEFAULT_KP, DEFAULT_KS, DEFAULT_KV)
         applyMotorPower(power)
         return power
+    }
+
+    fun updateBackup(pose: Pose, currentVelocity: Double): Double {
+        updateDistanceToGoal(pose)
+        clearLutDiagnostics()
+        shotStatus = "Backup: fixed 1480 TPS / hood 0.35"
+        flyWheelVelo = BACKUP_TARGET_VELOCITY_TPS
+        setHoodPosition(BACKUP_HOOD_POSITION)
+        val power = calculate(flyWheelVelo, currentVelocity, DEFAULT_KP, DEFAULT_KS, DEFAULT_KV)
+        applyMotorPower(power)
+        return power
+    }
+
+    private fun updateDistanceToGoal(pose: Pose) {
+        val goal = CurrAlliance.CurrGoal
+        goalTargetX = goal.x()
+        goalTargetY = goal.y()
+        // Field coordinates are inches; use the 2D horizontal distance, not 3D range.
+        distanceToGoalInches = Math.hypot(goalTargetX - pose.x(), goalTargetY - pose.y())
+    }
+
+    private fun setHoodPosition(requestedPosition: Double) {
+        if (!requestedPosition.isFinite()) return
+        val position = ServoPositions.clipHoodPosition(requestedPosition)
+        if (kotlin.math.abs(position - hoodPosition) >= HOOD_COMMAND_EPSILON) {
+            hood.position = position
+            hoodPosition = position
+        }
     }
 
     private fun clearLutDiagnostics() {

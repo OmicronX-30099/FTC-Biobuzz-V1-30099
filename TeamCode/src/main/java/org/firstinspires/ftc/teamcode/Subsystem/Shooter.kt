@@ -9,6 +9,11 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
 
 object Shooter {
+    enum class Mode { NORMAL, BACKUP }
+
+    var mode = Mode.NORMAL
+        private set
+
     lateinit var gate: Servo
         private set
     var gateOpen: Boolean = false
@@ -21,6 +26,7 @@ object Shooter {
     var shooterVelocity: Double = 0.0
     var offPow: Double = 0.0
     fun init(hardwareMap: HardwareMap) {
+        mode = Mode.NORMAL
         gate = hardwareMap.get(Servo::class.java, "gate")
         gate.direction = Servo.Direction.FORWARD
         Flywheel.init(hardwareMap)
@@ -34,6 +40,11 @@ object Shooter {
         Turret.start()
     }
 
+    fun toggleMode(): Mode {
+        mode = if (mode == Mode.NORMAL) Mode.BACKUP else Mode.NORMAL
+        return mode
+    }
+
     fun setGate(open: Boolean) {
         if (open == gateOpen) return
         gate.position = if (open) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
@@ -43,8 +54,13 @@ object Shooter {
     @JvmOverloads
     fun update(pose: Pose, velocityOffsetTPS: Double = 0.0, aimOffsetDegrees: Double = 0.0) {
         shooterVelocity = shooter.velocity
-        shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)
-        Turret.update(pose, aimOffsetDegrees)
+        if (mode == Mode.BACKUP) {
+            shooterPow = Flywheel.updateBackup(pose, shooterVelocity)
+            Turret.updateToDegrees(0.0)
+        } else {
+            shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)
+            Turret.update(pose, aimOffsetDegrees)
+        }
     }
 
     fun stop() {
