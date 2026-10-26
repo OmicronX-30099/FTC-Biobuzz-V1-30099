@@ -1,7 +1,7 @@
 # Turret Auto Tuner
 
 Select **Turret Auto Tuner** in the **Tests** group. This is a standalone OpMode;
-it does not call or modify `TeleOpMode`, and it never writes `TurretConfig`.
+it does not call or modify `TeleOpRedMode`, and it never writes `TurretConfig`.
 It uses the existing turret controller, encoder tracker, hardware calibration,
 power cap, friction ramp and deadband. It requires the same configured hardware
 as TeleOp, including the drivetrain, Pinpoint, flywheel, servos and breakbeams.

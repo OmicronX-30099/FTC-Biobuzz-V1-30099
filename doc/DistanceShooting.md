@@ -6,10 +6,17 @@ selected goal. Measured robot Y above 70.75 inches selects goal 2; otherwise goa
 1 is selected. Goal coordinates are configured in `Util/Alliance.kt` and used
 for turret aiming and shot distance.
 
-D-pad left/right add -2/+2 degrees per press to the turret's aim target without
-changing localized robot heading. D-pad up/down add/subtract 20 ticks/second per
-press from flywheel TPS (clipped at zero). Holding a button does not repeat.
-Circle restores the starting pose and clears both accumulated offsets.
+Either gamepad's D-pad left/right adds -2/+2 degrees per press to the turret's
+aim target without changing localized robot heading. D-pad up/down adds/subtracts
+20 ticks/second per press from flywheel TPS (clipped at zero). Cross toggles the
+shooter mode, and Circle restores the starting pose and clears both accumulated
+offsets. These controls work from either gamepad. Holding a button does not repeat.
+
+Backup shooter mode uses a fixed default target of `1480 TPS` and hood position
+`0.25`; the D-pad up/down TPS trim is applied in this mode too.
+
+`TeleOpBlue` selects Blue alliance goals and resets to `(133.3, 7.3, 90°)`,
+mirroring the Red start X coordinate across `x = 70.75`.
 
 ## Calibration and model choice
 

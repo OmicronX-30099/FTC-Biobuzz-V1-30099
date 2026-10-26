@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 object Flywheel {
     private const val HOOD_COMMAND_EPSILON = 0.001
     const val BACKUP_TARGET_VELOCITY_TPS = 1480.0
-    const val BACKUP_HOOD_POSITION = 0.35
+    const val BACKUP_HOOD_POSITION = 0.25
     private var lastMotorPower = 0.0
     private val distanceShot = DistanceShotInterpolator.Shot()
     @JvmField @Volatile var AUTO_DISTANCE_SHOT: Boolean = true
@@ -110,11 +110,14 @@ object Flywheel {
         return power
     }
 
-    fun updateBackup(pose: Pose, currentVelocity: Double): Double {
+    fun updateBackup(pose: Pose, currentVelocity: Double, velocityOffsetTPS: Double = 0.0): Double {
         updateDistanceToGoal(pose)
         clearLutDiagnostics()
-        shotStatus = "Backup: fixed 1480 TPS / hood 0.35"
-        flyWheelVelo = BACKUP_TARGET_VELOCITY_TPS
+        if (!velocityOffsetTPS.isFinite()) {
+            return stopInvalidShot("Invalid shooter trim - shooter stopped")
+        }
+        flyWheelVelo = (BACKUP_TARGET_VELOCITY_TPS + velocityOffsetTPS).coerceAtLeast(0.0)
+        shotStatus = "Backup: ${flyWheelVelo.toInt()} TPS / hood $BACKUP_HOOD_POSITION"
         setHoodPosition(BACKUP_HOOD_POSITION)
         val power = calculate(flyWheelVelo, currentVelocity, DEFAULT_KP, DEFAULT_KS, DEFAULT_KV)
         applyMotorPower(power)

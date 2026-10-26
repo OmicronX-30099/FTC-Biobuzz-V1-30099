@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants
 import org.firstinspires.ftc.teamcode.control.ShootingOffsets
 
 @TeleOp(name = "TeleOpRed", group = "Red")
-class TeleOpMode: LinearOpMode() {
+class TeleOpRedMode: LinearOpMode() {
     private lateinit var follower: Follower
     private val shootingOffsets = ShootingOffsets()
     private var lastLoopStartNanos = 0L
@@ -80,10 +80,10 @@ class TeleOpMode: LinearOpMode() {
     private fun startRobot() {
         hubs.forEach { it.clearBulkCache() }
         Shooter.start()
-        circleWasPressed = gamepad1.circle
-        crossWasPressed = gamepad1.cross
-        shootingOffsets.seedButtons(gamepad1.dpad_left, gamepad1.dpad_right,
-            gamepad1.dpad_up, gamepad1.dpad_down)
+        circleWasPressed = gamepad1.circle || gamepad2.circle
+        crossWasPressed = gamepad1.cross || gamepad2.cross
+        shootingOffsets.seedButtons(dpadLeftPressed(), dpadRightPressed(),
+            dpadUpPressed(), dpadDownPressed())
         lastLoopStartNanos = 0L
         previousWorkEndNanos = 0L
         loopSampleCount = 0
@@ -113,11 +113,11 @@ class TeleOpMode: LinearOpMode() {
             gamepad2.rumble(200)
         }
 
-        val circlePressed = gamepad1.circle
+        val circlePressed = gamepad1.circle || gamepad2.circle
         if (circlePressed && !circleWasPressed) resetPoseToStart()
         circleWasPressed = circlePressed
 
-        val crossPressed = gamepad1.cross
+        val crossPressed = gamepad1.cross || gamepad2.cross
         if (crossPressed && !crossWasPressed) Shooter.toggleMode()
         crossWasPressed = crossPressed
 
@@ -127,8 +127,8 @@ class TeleOpMode: LinearOpMode() {
         follower.update()
         val driveEnd = System.nanoTime()
         val pose = follower.pose()
-        shootingOffsets.update(gamepad1.dpad_left, gamepad1.dpad_right,
-            gamepad1.dpad_up, gamepad1.dpad_down)
+        shootingOffsets.update(dpadLeftPressed(), dpadRightPressed(),
+            dpadUpPressed(), dpadDownPressed())
         CurrAlliance.SelectGoalForY(pose.y())
 
         val shooting = gamepad1.left_bumper
@@ -201,10 +201,15 @@ class TeleOpMode: LinearOpMode() {
     }
 
     private fun resetPoseToStart() {
-        shootingOffsets.reset(gamepad1.dpad_left, gamepad1.dpad_right,
-            gamepad1.dpad_up, gamepad1.dpad_down)
+        shootingOffsets.reset(dpadLeftPressed(), dpadRightPressed(),
+            dpadUpPressed(), dpadDownPressed())
         follower.setPose(Pose(8.2, 7.3, Math.toRadians(90.0)))
     }
+
+    private fun dpadLeftPressed() = gamepad1.dpad_left || gamepad2.dpad_left
+    private fun dpadRightPressed() = gamepad1.dpad_right || gamepad2.dpad_right
+    private fun dpadUpPressed() = gamepad1.dpad_up || gamepad2.dpad_up
+    private fun dpadDownPressed() = gamepad1.dpad_down || gamepad2.dpad_down
 
     private fun stopRobot() {
         try {

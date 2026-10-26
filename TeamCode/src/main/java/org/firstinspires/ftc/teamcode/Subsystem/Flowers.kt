@@ -20,11 +20,14 @@ object Flowers {
     }
 
     fun updateToggle(bumperPressed: Boolean) {
-        if (bumperPressed && !bumperWasPressed) {
-            isDown = !isDown
-            applyPositions()
-        }
+        if (bumperPressed && !bumperWasPressed) setDown(!isDown)
         bumperWasPressed = bumperPressed
+    }
+
+    fun setDown(down: Boolean) {
+        if (isDown == down) return
+        isDown = down
+        applyPositions()
     }
 
     private fun applyPositions() {

@@ -55,7 +55,7 @@ object Shooter {
     fun update(pose: Pose, velocityOffsetTPS: Double = 0.0, aimOffsetDegrees: Double = 0.0) {
         shooterVelocity = shooter.velocity
         if (mode == Mode.BACKUP) {
-            shooterPow = Flywheel.updateBackup(pose, shooterVelocity)
+            shooterPow = Flywheel.updateBackup(pose, shooterVelocity, velocityOffsetTPS)
             Turret.updateToDegrees(0.0)
         } else {
             shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)

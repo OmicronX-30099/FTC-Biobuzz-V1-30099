@@ -12,8 +12,8 @@ object ServoPositions {
 
     const val GATE_CLOSED = 0.87
     const val GATE_OPEN = 0.75
-    const val LEFT_FLOWER_DOWN = 0.51
-    const val RIGHT_FLOWER_DOWN = 0.5
+    const val LEFT_FLOWER_DOWN = 0.496
+    const val RIGHT_FLOWER_DOWN = 0.492
     const val LEFT_FLOWER_UP = 0.83
     const val RIGHT_FLOWER_UP = 0.82
 }
