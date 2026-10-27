@@ -7,9 +7,15 @@ import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
+import org.firstinspires.ftc.teamcode.Util.CurrAlliance
+import org.firstinspires.ftc.teamcode.control.FlightTimeInterpolator
+import org.firstinspires.ftc.teamcode.control.ShootingPosePrediction
 
 object Shooter {
     enum class Mode { NORMAL, BACKUP }
+
+    var sotmEnabled = true
+        private set
 
     var mode = Mode.NORMAL
         private set
@@ -25,8 +31,13 @@ object Shooter {
     var shooterPow: Double = 0.0
     var shooterVelocity: Double = 0.0
     var offPow: Double = 0.0
+    var shotFlightTimeSeconds: Double = Double.NaN
+        private set
+    var predictedShotPose: Pose? = null
+        private set
     fun init(hardwareMap: HardwareMap) {
         mode = Mode.NORMAL
+        sotmEnabled = true
         gate = hardwareMap.get(Servo::class.java, "gate")
         gate.direction = Servo.Direction.FORWARD
         Flywheel.init(hardwareMap)
@@ -35,6 +46,8 @@ object Shooter {
         gateOpen = false
         shooterPow = 0.0
         shooterVelocity = 0.0
+        shotFlightTimeSeconds = Double.NaN
+        predictedShotPose = null
     }
     fun start() {
         Turret.start()
@@ -45,6 +58,11 @@ object Shooter {
         return mode
     }
 
+    fun toggleSotm(): Boolean {
+        sotmEnabled = !sotmEnabled
+        return sotmEnabled
+    }
+
     fun setGate(open: Boolean) {
         if (open == gateOpen) return
         gate.position = if (open) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
@@ -53,13 +71,34 @@ object Shooter {
 
     @JvmOverloads
     fun update(pose: Pose, velocityOffsetTPS: Double = 0.0, aimOffsetDegrees: Double = 0.0) {
+        updateWithMotion(pose, 0.0, 0.0, 0.0, velocityOffsetTPS, aimOffsetDegrees)
+    }
+
+    /** Predicts the robot pose at impact, then uses that pose for turret, distance, TPS and hood. */
+    fun updateWithMotion(
+        pose: Pose,
+        fieldVelocityXInchesPerSecond: Double,
+        fieldVelocityYInchesPerSecond: Double,
+        angularVelocityRadiansPerSecond: Double,
+        velocityOffsetTPS: Double = 0.0,
+        aimOffsetDegrees: Double = 0.0
+    ) {
         shooterVelocity = shooter.velocity
+        val goal = CurrAlliance.CurrGoal
+        val currentDistance = Math.hypot(goal.x() - pose.x(), goal.y() - pose.y())
+        shotFlightTimeSeconds = FlightTimeInterpolator.atDistance(currentDistance)
+        val aimingPose = if (sotmEnabled) {
+            ShootingPosePrediction.predict(pose,
+                fieldVelocityXInchesPerSecond, fieldVelocityYInchesPerSecond,
+                angularVelocityRadiansPerSecond, shotFlightTimeSeconds)
+        } else pose
+        predictedShotPose = aimingPose
         if (mode == Mode.BACKUP) {
-            shooterPow = Flywheel.updateBackup(pose, shooterVelocity, velocityOffsetTPS)
+            shooterPow = Flywheel.updateBackup(aimingPose, shooterVelocity, velocityOffsetTPS)
             Turret.updateToDegrees(0.0)
         } else {
-            shooterPow = Flywheel.update(pose, shooterVelocity, velocityOffsetTPS)
-            Turret.update(pose, aimOffsetDegrees)
+            shooterPow = Flywheel.update(aimingPose, shooterVelocity, velocityOffsetTPS)
+            Turret.update(aimingPose, aimOffsetDegrees)
         }
     }
 

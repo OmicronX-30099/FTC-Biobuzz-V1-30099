@@ -26,6 +26,7 @@ class TeleOpRedMode: LinearOpMode() {
     private var lastTelemetryNanos = 0L
     private var circleWasPressed = false
     private var crossWasPressed = false
+    private var triangleWasPressed = false
     private lateinit var hubs: List<LynxModule>
     private lateinit var originalCacheModes: List<LynxModule.BulkCachingMode>
     private var lastControlMs = 0.0
@@ -82,6 +83,7 @@ class TeleOpRedMode: LinearOpMode() {
         Shooter.start()
         circleWasPressed = gamepad1.circle || gamepad2.circle
         crossWasPressed = gamepad1.cross || gamepad2.cross
+        triangleWasPressed = gamepad1.triangle || gamepad2.triangle
         shootingOffsets.seedButtons(dpadLeftPressed(), dpadRightPressed(),
             dpadUpPressed(), dpadDownPressed())
         lastLoopStartNanos = 0L
@@ -121,12 +123,17 @@ class TeleOpRedMode: LinearOpMode() {
         if (crossPressed && !crossWasPressed) Shooter.toggleMode()
         crossWasPressed = crossPressed
 
+        val trianglePressed = gamepad1.triangle || gamepad2.triangle
+        if (trianglePressed && !triangleWasPressed) Shooter.toggleSotm()
+        triangleWasPressed = trianglePressed
+
         follower.manual(-gamepad1.left_stick_y.toDouble(),
             -gamepad1.left_stick_x.toDouble(), -gamepad1.right_stick_x.toDouble())
         val driveStart = System.nanoTime()
         follower.update()
         val driveEnd = System.nanoTime()
         val pose = follower.pose()
+        val fieldVelocity = follower.velocity()
         shootingOffsets.update(dpadLeftPressed(), dpadRightPressed(),
             dpadUpPressed(), dpadDownPressed())
         CurrAlliance.SelectGoalForY(pose.y())
@@ -139,8 +146,8 @@ class TeleOpRedMode: LinearOpMode() {
         Flowers.updateToggle(gamepad1.right_bumper)
 
         val shooterStart = System.nanoTime()
-        // Aim from the current pose; do not lead for robot translation or rotation.
-        Shooter.update(pose, shootingOffsets.velocityTPS, shootingOffsets.aimOffsetDegrees)
+        Shooter.updateWithMotion(pose, fieldVelocity.vx, fieldVelocity.vy, fieldVelocity.omega,
+            shootingOffsets.velocityTPS, shootingOffsets.aimOffsetDegrees)
         val controlEnd = System.nanoTime()
         lastControlMs = (controlEnd - loopStartNanos) / 1_000_000.0
 
@@ -155,10 +162,14 @@ class TeleOpRedMode: LinearOpMode() {
             telemetry.addData("Target goal", if (CurrAlliance.useGoal1) 1 else 2)
             telemetry.addData("Goal position (in)", "x: %.2f, y: %.2f", goal.x(), goal.y())
             telemetry.addData("Shooting mode (Cross toggles)", Shooter.mode)
+            telemetry.addData("SOTM (Triangle toggles)", if (Shooter.sotmEnabled) "ON" else "OFF")
             telemetry.addData("Target flywheel velocity (ticks/s)", "%.1f", Flywheel.flyWheelVelo)
             telemetry.addData("Current flywheel velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
             telemetry.addData("Hood position", "%.3f", Flywheel.hoodPosition)
             telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
+            telemetry.addData("Shot flight time (s)", "%.3f", Shooter.shotFlightTimeSeconds)
+            telemetry.addData("SOTM pose (in)", "x: %.2f, y: %.2f",
+                Shooter.predictedShotPose?.x() ?: pose.x(), Shooter.predictedShotPose?.y() ?: pose.y())
             telemetry.addData("Shot settings", Flywheel.shotStatus)
             if (Shooter.mode == Shooter.Mode.NORMAL && Flywheel.AUTO_DISTANCE_SHOT) {
                 telemetry.addData("Calibrated / commanded TPS", "%.1f / %.1f",
