@@ -142,14 +142,13 @@ class TeleOpBlueMode: LinearOpMode() {
 
         val shooting = gamepad1.left_bumper
         val intakeStart = System.nanoTime()
-        Shooter.setGate(shooting)
-        Rollers.update(gamepad1.right_trigger, gamepad1.left_trigger, Shooter.gateOpen)
-
         Flowers.updateToggle(gamepad1.right_bumper)
 
         val shooterStart = System.nanoTime()
         Shooter.updateWithMotion(pose, fieldVelocity.vx, fieldVelocity.vy, fieldVelocity.omega,
             shootingOffsets.velocityTPS, shootingOffsets.aimOffsetDegrees)
+        Shooter.setGate(shooting)
+        Rollers.update(gamepad1.right_trigger, gamepad1.left_trigger, Shooter.gateOpen)
         val controlEnd = System.nanoTime()
         lastControlMs = (controlEnd - loopStartNanos) / 1_000_000.0
 
@@ -167,6 +166,7 @@ class TeleOpBlueMode: LinearOpMode() {
             telemetry.addData("SOTM (Triangle toggles)", if (Shooter.sotmEnabled) "ON" else "OFF")
             telemetry.addData("Target flywheel velocity (ticks/s)", "%.1f", Flywheel.flyWheelVelo)
             telemetry.addData("Current flywheel velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
+            telemetry.addData("Flywheel raw velocity (ticks/s)", "%.1f", Shooter.rawShooterVelocity)
             telemetry.addData("Hood position", "%.3f", Flywheel.hoodPosition)
             telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
             telemetry.addData("Shot flight time (s)", "%.3f", Shooter.shotFlightTimeSeconds)

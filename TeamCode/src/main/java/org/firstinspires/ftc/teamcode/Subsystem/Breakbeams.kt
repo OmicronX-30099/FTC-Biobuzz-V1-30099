@@ -11,7 +11,7 @@ object Breakbeams {
     @JvmField var BEAM_3_NAME = "bb3"
     @JvmField var BEAM_4_NAME = "bb4"
     @JvmField var BLOCKED_WHEN_LOW = true
-    @JvmField var DEBOUNCE_MS = 40.0
+    @JvmField var DEBOUNCE_MS = 50.0
     private lateinit var beams: Array<DigitalChannel>
     private var occupancy = BallOccupancy()
     val ballCount: Int get() = occupancy.count
@@ -24,7 +24,7 @@ object Breakbeams {
     }
 
     fun update(nowNanos: Long): Boolean {
-        val debounce = if (DEBOUNCE_MS.isFinite()) DEBOUNCE_MS.coerceAtLeast(0.0) else 40.0
+        val debounce = if (DEBOUNCE_MS.isFinite()) DEBOUNCE_MS.coerceAtLeast(0.0) else 50.0
         for (i in beams.indices) {
             val state = beams[i].state
             occupancy.sample(i, if (BLOCKED_WHEN_LOW) !state else state,

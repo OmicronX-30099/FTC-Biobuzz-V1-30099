@@ -104,9 +104,9 @@ class RedAuto16P: OpMode()  {
         val pose = follower.pose()
         CurrAlliance.SelectGoalForY(pose.y())
         if (mechanismUpdatesEnabled) {
+            Shooter.update(pose)
             Shooter.setGate(autoShooting)
             Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen)
-            Shooter.update(pose)
         }
 
         telemetry.addData("x", pose.x())

@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.Servo
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
+import org.firstinspires.ftc.teamcode.control.FlywheelVelocityKalman
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 
 @Config
@@ -18,8 +19,11 @@ object Flywheel {
     const val BACKUP_HOOD_POSITION = 0.25
     private var lastMotorPower = 0.0
     private val distanceShot = DistanceShotInterpolator.Shot()
+    private val velocityFilter = FlywheelVelocityKalman()
     @JvmField @Volatile var AUTO_DISTANCE_SHOT: Boolean = true
     @JvmField @Volatile var TARGET_VELOCITY_TPS: Double = 1460.0
+    @JvmField @Volatile var KALMAN_PROCESS_NOISE_TPS: Double = 20.0
+    @JvmField @Volatile var KALMAN_MEASUREMENT_NOISE_TPS: Double = 30.0
 
     @JvmField @Volatile var HOOD_POSITION: Double = 0.35
     var hoodPosition: Double = ServoPositions.HOOD_DEFAULT
@@ -54,6 +58,7 @@ object Flywheel {
         lastMotorPower = 0.0
         shooter.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
         shooter.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.FLOAT
+        resetVelocityFilter(shooter.velocity)
         flyWheelVelo = 0.0
         distanceToGoalInches = Double.NaN
         shotStatus = "Not started"
@@ -67,7 +72,20 @@ object Flywheel {
         return ShooterVelocityController.calculate(targetVelocity, currentVelocity, kP, kS, kV)
     }
     fun update(pose: Pose) {
-        update(pose, shooter.velocity)
+        update(pose, filterVelocity(shooter.velocity))
+    }
+
+    /** Kalman-filter a raw encoder velocity sample before feeding velocity control. */
+    fun filterVelocity(measuredVelocityTPS: Double): Double {
+        return velocityFilter.update(measuredVelocityTPS,
+            KALMAN_PROCESS_NOISE_TPS, KALMAN_MEASUREMENT_NOISE_TPS)
+    }
+
+    /** Seed the estimate at INIT so startup does not ramp up from an assumed zero. */
+    fun resetVelocityFilter(initialVelocityTPS: Double) {
+        val measurementNoise = if (KALMAN_MEASUREMENT_NOISE_TPS.isFinite() &&
+            KALMAN_MEASUREMENT_NOISE_TPS > 0.0) KALMAN_MEASUREMENT_NOISE_TPS else 30.0
+        velocityFilter.reset(initialVelocityTPS, measurementNoise * measurementNoise)
     }
 
     @JvmOverloads

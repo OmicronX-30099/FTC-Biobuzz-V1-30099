@@ -21,6 +21,11 @@ the Control Hub; desktop tests cannot certify a hardware loop period.
 - Angular compensation reuses `follower.velocity().omega`; it adds arithmetic
   only, with no extra Pinpoint read. Translation and heading prediction share
   one shooting pose per iteration.
+- SOTM refines the one-dimensional flight-time table with four fixed-point
+  passes over the predicted range. The passes use primitive math only, and
+  heading still uses the 0.05 s turret response lead.
+- Flywheel velocity uses an allocation-free scalar Kalman update. The beam
+  counter reads only the next ordered sensor and skips its inter-sensor delay.
 - Automatic shot interpolation reuses one output object instead of allocating
   a shot every iteration. Table validation and invalid-input shutdown remain
   active every iteration. This reduces garbage creation, not hardware I/O.

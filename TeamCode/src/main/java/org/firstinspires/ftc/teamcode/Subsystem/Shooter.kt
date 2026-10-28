@@ -29,7 +29,10 @@ object Shooter {
     val hood: Servo get() = Flywheel.hood
     val shooter: DcMotorEx get() = Flywheel.shooter
     var shooterPow: Double = 0.0
+    var rawShooterVelocity: Double = 0.0
+        private set
     var shooterVelocity: Double = 0.0
+        private set
     var offPow: Double = 0.0
     var shotFlightTimeSeconds: Double = Double.NaN
         private set
@@ -41,11 +44,13 @@ object Shooter {
         gate = hardwareMap.get(Servo::class.java, "gate")
         gate.direction = Servo.Direction.FORWARD
         Flywheel.init(hardwareMap)
+        rawShooterVelocity = shooter.velocity
+        Flywheel.resetVelocityFilter(rawShooterVelocity)
+        shooterVelocity = if (rawShooterVelocity.isFinite()) rawShooterVelocity else 0.0
         Turret.init(hardwareMap)
         gate.position = ServoPositions.GATE_CLOSED
         gateOpen = false
         shooterPow = 0.0
-        shooterVelocity = 0.0
         shotFlightTimeSeconds = Double.NaN
         predictedShotPose = null
     }
@@ -74,7 +79,7 @@ object Shooter {
         updateWithMotion(pose, 0.0, 0.0, 0.0, velocityOffsetTPS, aimOffsetDegrees)
     }
 
-    /** Predicts the robot pose at impact, then uses that pose for turret, distance, TPS and hood. */
+    /** Refines time of flight against predicted range, then selects the shot at impact. */
     fun updateWithMotion(
         pose: Pose,
         fieldVelocityXInchesPerSecond: Double,
@@ -83,14 +88,29 @@ object Shooter {
         velocityOffsetTPS: Double = 0.0,
         aimOffsetDegrees: Double = 0.0
     ) {
-        shooterVelocity = shooter.velocity
+        rawShooterVelocity = shooter.velocity
+        shooterVelocity = Flywheel.filterVelocity(rawShooterVelocity)
         val goal = CurrAlliance.CurrGoal
         val currentDistance = Math.hypot(goal.x() - pose.x(), goal.y() - pose.y())
-        shotFlightTimeSeconds = FlightTimeInterpolator.atDistance(currentDistance)
+        var flightTime = FlightTimeInterpolator.atDistance(currentDistance)
+        if (sotmEnabled && flightTime.isFinite() && flightTime >= 0.0 &&
+            fieldVelocityXInchesPerSecond.isFinite() && fieldVelocityYInchesPerSecond.isFinite()) {
+            // Fixed-point refinement accounts for the changed range during projectile flight.
+            repeat(4) {
+                val futureX = ShootingPosePrediction.clampFieldCoordinate(
+                    pose.x() + fieldVelocityXInchesPerSecond * flightTime)
+                val futureY = ShootingPosePrediction.clampFieldCoordinate(
+                    pose.y() + fieldVelocityYInchesPerSecond * flightTime)
+                val futureDistance = Math.hypot(goal.x() - futureX, goal.y() - futureY)
+                val refinedTime = FlightTimeInterpolator.atDistance(futureDistance)
+                if (refinedTime.isFinite() && refinedTime >= 0.0) flightTime = refinedTime
+            }
+        }
+        shotFlightTimeSeconds = flightTime
         val aimingPose = if (sotmEnabled) {
             ShootingPosePrediction.predict(pose,
                 fieldVelocityXInchesPerSecond, fieldVelocityYInchesPerSecond,
-                angularVelocityRadiansPerSecond, shotFlightTimeSeconds)
+                angularVelocityRadiansPerSecond, flightTime)
         } else pose
         predictedShotPose = aimingPose
         if (mode == Mode.BACKUP) {

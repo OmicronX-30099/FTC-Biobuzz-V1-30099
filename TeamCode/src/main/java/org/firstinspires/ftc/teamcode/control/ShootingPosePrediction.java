@@ -36,15 +36,15 @@ public final class ShootingPosePrediction {
     }
 
     private static Pose predictedPose(Pose current, double deltaX, double deltaY, double deltaHeading) {
-        double x = clamp(current.x() + deltaX);
-        double y = clamp(current.y() + deltaY);
+        double x = clampFieldCoordinate(current.x() + deltaX);
+        double y = clampFieldCoordinate(current.y() + deltaY);
         double heading = current.heading() + deltaHeading;
         // Reuse the measured pose when motion is zero or the boundary clamp removes it.
         if (x == current.x() && y == current.y() && heading == current.heading()) return current;
         return new Pose(x, y, heading);
     }
 
-    private static double clamp(double coordinate) {
+    public static double clampFieldCoordinate(double coordinate) {
         return Math.max(MIN_FIELD_COORDINATE_IN, Math.min(MAX_FIELD_COORDINATE_IN, coordinate));
     }
 
