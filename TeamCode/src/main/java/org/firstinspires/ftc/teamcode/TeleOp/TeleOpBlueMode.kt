@@ -40,6 +40,7 @@ class TeleOpBlueMode: LinearOpMode() {
     private var loopSampleSum = 0.0
     private var shooterInitialized = false
     private var rollersInitialized = false
+    private var useBackup = false;
 
     private companion object {
         const val TELEMETRY_INTERVAL_MS = 200
@@ -122,7 +123,10 @@ class TeleOpBlueMode: LinearOpMode() {
         circleWasPressed = circlePressed
 
         val crossPressed = gamepad1.cross || gamepad2.cross
-        if (crossPressed && !crossWasPressed) Shooter.toggleMode()
+        if (crossPressed && !crossWasPressed) {
+            useBackup = !useBackup
+            Shooter.toggleMode(if (useBackup) Shooter.Mode.BACKUP else Shooter.Mode.NORMAL)
+        }
         crossWasPressed = crossPressed
 
         val trianglePressed = gamepad1.triangle || gamepad2.triangle

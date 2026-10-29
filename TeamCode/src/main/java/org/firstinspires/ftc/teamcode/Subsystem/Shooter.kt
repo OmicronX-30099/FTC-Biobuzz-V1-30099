@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.control.FlightTimeInterpolator
 import org.firstinspires.ftc.teamcode.control.ShootingPosePrediction
 
 object Shooter {
-    enum class Mode { NORMAL, BACKUP }
+    enum class Mode { NORMAL, BACKUP, AUTO}
 
     var sotmEnabled = true
         private set
@@ -28,6 +28,8 @@ object Shooter {
 
     val hood: Servo get() = Flywheel.hood
     val shooter: DcMotorEx get() = Flywheel.shooter
+    var autoFlywheel: Double = 0.0
+    var autoHood: Double = 0.0
     var shooterPow: Double = 0.0
     var rawShooterVelocity: Double = 0.0
         private set
@@ -58,8 +60,8 @@ object Shooter {
         Turret.start()
     }
 
-    fun toggleMode(): Mode {
-        mode = if (mode == Mode.NORMAL) Mode.BACKUP else Mode.NORMAL
+    fun toggleMode(newMode: Mode): Mode {
+        mode = newMode
         return mode
     }
 
@@ -116,7 +118,13 @@ object Shooter {
         if (mode == Mode.BACKUP) {
             shooterPow = Flywheel.updateBackup(aimingPose, shooterVelocity, velocityOffsetTPS)
             Turret.updateToDegrees(0.0)
-        } else {
+        }
+        else if (mode == Mode.AUTO) {
+            shooterPow = Flywheel.updateAuto(aimingPose, shooterVelocity, autoFlywheel, autoHood)
+            Turret.update(aimingPose, aimOffsetDegrees)
+        }
+        else
+        {
             shooterPow = Flywheel.update(aimingPose, shooterVelocity, velocityOffsetTPS)
             Turret.update(aimingPose, aimOffsetDegrees)
         }

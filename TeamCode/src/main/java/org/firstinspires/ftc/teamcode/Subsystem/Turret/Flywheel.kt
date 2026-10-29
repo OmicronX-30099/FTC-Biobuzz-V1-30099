@@ -141,6 +141,19 @@ object Flywheel {
         applyMotorPower(power)
         return power
     }
+    fun updateAuto(pose: Pose, currentVelocity: Double, NewVelocity: Double, NewHood: Double): Double {
+        updateDistanceToGoal(pose)
+        clearLutDiagnostics()
+        if (!NewVelocity.isFinite() || !NewHood.isFinite()) {
+            return stopInvalidShot("Invalid shooter trim - shooter stopped")
+        }
+        flyWheelVelo = (NewVelocity).coerceAtLeast(0.0)
+        shotStatus = "Auto: ${flyWheelVelo.toInt()} TPS / hood $NewHood"
+        setHoodPosition(NewHood)
+        val power = calculate(flyWheelVelo, currentVelocity, DEFAULT_KP, DEFAULT_KS, DEFAULT_KV)
+        applyMotorPower(power)
+        return power
+    }
 
     private fun updateDistanceToGoal(pose: Pose) {
         val goal = CurrAlliance.CurrGoal
