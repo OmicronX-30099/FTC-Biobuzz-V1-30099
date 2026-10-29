@@ -11,6 +11,7 @@ import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.groups.Groups.parallel
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
+import com.pedropathing.math.Pose
 import com.pedropathing.paths.Path
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
@@ -19,11 +20,20 @@ import org.firstinspires.ftc.teamcode.Subsystem.Breakbeams
 import org.firstinspires.ftc.teamcode.Subsystem.Flowers
 import org.firstinspires.ftc.teamcode.Subsystem.Rollers
 import org.firstinspires.ftc.teamcode.Subsystem.Shooter
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.ShotCalibration
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
+import org.firstinspires.ftc.teamcode.Util.ServoPositions
+import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
 import org.firstinspires.ftc.teamcode.pedro.Constants
+import kotlin.math.abs
+import kotlin.math.hypot
 
-@Autonomous(name = "Red Auto Test", group = "Red")
+@Autonomous(name = "Red Auto Manual Update Test", group = "Red")
 class RedAutoManualTest: OpMode()  {
+    private companion object {
+        const val SHOT_DISTANCE_UPDATE_EPSILON_INCHES = 0.01
+    }
+
     private lateinit var follower: Follower
     private lateinit var fullPathRed: Command
     private lateinit var hubs: List<LynxModule>
@@ -33,6 +43,10 @@ class RedAutoManualTest: OpMode()  {
     private var autoShooting = false
     private var autoIntaking = false
     private var mechanismUpdatesEnabled = false
+    private var shotDistanceInches = Double.NaN
+    private var lastConfiguredShotDistanceInches = Double.NaN
+    private var shotConfigurationStatus = "Not configured"
+    private var shotConfigurationValid = false
 
     override fun init() {
         Scheduler.reset()
@@ -44,6 +58,12 @@ class RedAutoManualTest: OpMode()  {
         CurrAlliance.Reset()
         Shooter.init(hardwareMap)
         Shooter.toggleMode(Shooter.Mode.AUTO)
+        Shooter.autoFlywheel = 0.0
+        Shooter.autoHood = ServoPositions.HOOD_DEFAULT
+        shotDistanceInches = Double.NaN
+        lastConfiguredShotDistanceInches = Double.NaN
+        shotConfigurationStatus = "Waiting for first shot"
+        shotConfigurationValid = false
         shooterInitialized = true
         Rollers.init(hardwareMap)
         rollersInitialized = true
@@ -55,7 +75,7 @@ class RedAutoManualTest: OpMode()  {
 
         fullPathRed = sequential(
             waitMs(1500.0),
-            shootForOneSecond(),
+            shootForOneSecond(start),
             parallel(
                 setIntaking(true),
                 follow(follower, path1())
@@ -65,14 +85,14 @@ class RedAutoManualTest: OpMode()  {
             follow(follower, Paths.path(path3(), path4())),
             parallel(instant { Flowers.setDown(true) }, follow(follower, openPollenIntake())),
             waitMs(500.0),
-            shootForOneSecond(),
+            shootForOneSecond(openPollenIntake),
             setIntaking(true),
             follow(follower, path6()),
             waitMs(1000.0),
             setIntaking(false),
             follow(follower, path7()),
             waitMs(500.0),
-            shootForOneSecond(),
+            shootForOneSecond(point7),
             follow(follower, path8()),
             follow(follower, path9()),
             follow(follower, path10()),
@@ -83,7 +103,7 @@ class RedAutoManualTest: OpMode()  {
             follow(follower, path13()),
             follow(follower, path14()),
             waitMs(500.0),
-            shootForOneSecond(),
+            shootForOneSecond(point14),
             follow(follower, path15()),
             finishAuto()
         )
@@ -115,6 +135,10 @@ class RedAutoManualTest: OpMode()  {
         telemetry.addData("heading", pose.heading())
         telemetry.addData("Shooting", autoShooting)
         telemetry.addData("Intaking", autoIntaking)
+        telemetry.addData("Shot distance (in)", "%.1f", shotDistanceInches)
+        telemetry.addData("Shot setup", shotConfigurationStatus)
+        telemetry.addData("Flywheel goal (ticks/s)", "%.1f", Shooter.autoFlywheel)
+        telemetry.addData("Hood goal", "%.3f", Shooter.autoHood)
         telemetry.addData("Flower intake", if (Flowers.isDown) "Down" else "Up")
         telemetry.addData("Balls", Breakbeams.ballCount)
         telemetry.addData("Shooter velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
@@ -146,14 +170,39 @@ class RedAutoManualTest: OpMode()  {
         }
     }
 
-    private fun shootForOneSecond(): Command = sequential(
-        instant { autoShooting = true },
+    private fun shootForOneSecond(shootingPoint: Pose): Command = sequential(
+        configureShotFor(shootingPoint),
+        instant { autoShooting = shotConfigurationValid },
         waitMs(1000.0),
         instant { autoShooting = false }
     )
-    fun changeShootPow(Flypow: Double, Hoodpow: Double): Command = instant {
-        Shooter.autoFlywheel = Flypow
-        Shooter.autoHood = Hoodpow
+
+    private fun configureShotFor(shootingPoint: Pose): Command = instant {
+        CurrAlliance.SelectGoalForY(shootingPoint.y())
+        val goal = CurrAlliance.CurrGoal
+        shotDistanceInches = hypot(goal.x() - shootingPoint.x(), goal.y() - shootingPoint.y())
+        val distanceChanged = !lastConfiguredShotDistanceInches.isFinite() ||
+            abs(shotDistanceInches - lastConfiguredShotDistanceInches) >= SHOT_DISTANCE_UPDATE_EPSILON_INCHES
+        if (distanceChanged) {
+            lastConfiguredShotDistanceInches = shotDistanceInches
+            val shot = DistanceShotInterpolator.sample(
+                shotDistanceInches,
+                ShotCalibration.DISTANCE_INCHES,
+                ShotCalibration.VELOCITY_TPS,
+                ShotCalibration.HOOD_POSITIONS
+            )
+            if (shot == null) {
+                shotConfigurationValid = false
+                shotConfigurationStatus = "Invalid distance calibration"
+                Shooter.autoFlywheel = 0.0
+                Shooter.autoHood = ServoPositions.HOOD_DEFAULT
+            } else {
+                shotConfigurationValid = true
+                shotConfigurationStatus = if (shot.clamped) "Endpoint calibration used" else "Interpolated"
+                Shooter.autoFlywheel = shot.velocityTPS
+                Shooter.autoHood = shot.hoodPosition
+            }
+        }
     }
 
 
