@@ -11,6 +11,7 @@ import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.groups.Groups.parallel
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
+import com.pedropathing.ivy.pedro.PedroCommands.hold
 import com.pedropathing.paths.Path
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
@@ -19,7 +20,10 @@ import org.firstinspires.ftc.teamcode.Subsystem.Breakbeams
 import org.firstinspires.ftc.teamcode.Subsystem.Flowers
 import org.firstinspires.ftc.teamcode.Subsystem.Rollers
 import org.firstinspires.ftc.teamcode.Subsystem.Shooter
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
+import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.pedro.Constants
 
 @Autonomous(name = "Red Auto Test", group = "Red")
@@ -33,12 +37,16 @@ class RedAuto16P: OpMode()  {
     private var autoShooting = false
     private var autoIntaking = false
     private var mechanismUpdatesEnabled = false
+    private var autoStartNanos = 0L
+    private var turretParkStarted = false
 
     override fun init() {
         Scheduler.reset()
         autoShooting = false
         autoIntaking = false
         mechanismUpdatesEnabled = false
+        autoStartNanos = 0L
+        turretParkStarted = false
         follower = Constants.create(hardwareMap)
         follower.setPose(start)
         CurrAlliance.Reset()
@@ -67,6 +75,7 @@ class RedAuto16P: OpMode()  {
             shootForOneSecond(),
             setIntaking(true),
             follow(follower, path6()),
+            hold(follower, point6),
             waitMs(1000.0),
             setIntaking(false),
             follow(follower, path7()),
@@ -76,6 +85,7 @@ class RedAuto16P: OpMode()  {
             follow(follower, path9()),
             follow(follower, path10()),
             parallel(setIntaking(true), follow(follower, openPollenIntake2())),
+            hold(follower, openPollenIntake2),
             waitMs(1000.0),
             setIntaking(false),
             follow(follower, path12()),
@@ -90,6 +100,7 @@ class RedAuto16P: OpMode()  {
 
     override fun start() {
         hubs.forEach { it.clearBulkCache() }
+        autoStartNanos = System.nanoTime()
         Shooter.start()
         mechanismUpdatesEnabled = true
         schedule(fullPathRed)
@@ -103,10 +114,19 @@ class RedAuto16P: OpMode()  {
 
         val pose = follower.pose()
         CurrAlliance.SelectGoalForY(pose.y())
+        if (!turretParkStarted && autoStartNanos != 0L &&
+            System.nanoTime() - autoStartNanos >= 27_500_000_000L) {
+            Shooter.forceTurretZero = true
+            Turret.parkAtZero()
+            turretParkStarted = true
+        }
         if (mechanismUpdatesEnabled) {
             Shooter.update(pose)
             Shooter.setGate(autoShooting)
-            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen)
+            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen,
+                gateOpenTargetTPS = 1400.0)
+        } else if (turretParkStarted) {
+            Turret.updateToDegrees(0.0)
         }
 
         telemetry.addData("x", pose.x())
@@ -114,6 +134,8 @@ class RedAuto16P: OpMode()  {
         telemetry.addData("heading", pose.heading())
         telemetry.addData("Shooting", autoShooting)
         telemetry.addData("Intaking", autoIntaking)
+        telemetry.addData("Turret target / angle / power", "%.1f / %.1f / %.2f",
+            Turret.targetDegrees, Encoders.trueDegrees, Turret.motorPower)
         telemetry.addData("Flower intake", if (Flowers.isDown) "Down" else "Up")
         telemetry.addData("Balls", Breakbeams.ballCount)
         telemetry.addData("Shooter velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
@@ -128,6 +150,7 @@ class RedAuto16P: OpMode()  {
     }
 
     override fun stop() {
+        if (::follower.isInitialized) OpModeStorage.autonomousEndPose = follower.pose()
         Scheduler.reset()
         autoShooting = false
         autoIntaking = false
@@ -159,6 +182,9 @@ class RedAuto16P: OpMode()  {
         autoShooting = false
         autoIntaking = false
         Shooter.stop()
+        if (turretParkStarted) {
+            Turret.parkAtZero()
+        }
         Rollers.stop()
         mechanismUpdatesEnabled = false
     }
@@ -200,6 +226,7 @@ class RedAuto16P: OpMode()  {
     fun openPollenIntake(): Path = Paths.line(openPollenIntakeStart, openPollenIntake).linear(openPollenIntakeStart, openPollenIntake)
 
     fun path6(): Path = Paths.curve(openPollenIntake, point6Control1, point6).constant(point6)
+        .with(Constants.foresightConfig.maxPathSpeed.at(0.5))
 
     fun path7(): Path = Paths.curve(point6, point7Control1, point7).constant(point7)
 
@@ -210,6 +237,7 @@ class RedAuto16P: OpMode()  {
     fun path10(): Path = Paths.line(point10Start, point10).linear(point10Start, point10)
 
     fun openPollenIntake2(): Path = Paths.line(point10, openPollenIntake2).constant(openPollenIntake2)
+        .with(Constants.foresightConfig.maxPathSpeed.at(0.5))
 
     fun path12(): Path = Paths.line(point12Start, point12).linear(point12Start, point12)
 

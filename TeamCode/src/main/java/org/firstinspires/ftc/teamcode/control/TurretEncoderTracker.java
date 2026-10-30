@@ -40,6 +40,19 @@ public final class TurretEncoderTracker {
         return initialDegrees + (relativeTicks - initialTicks) * degreesPerTick;
     }
 
+    /** Correct drift using the nearest absolute revolution, preserving relative velocity and ticks. */
+    public boolean correctFromAbsolute(double absoluteMotorDegrees, int relativeTicks,
+                                       double maxCorrectionDegrees) {
+        if (!Double.isFinite(absoluteMotorDegrees) || absoluteMotorDegrees < 0
+                || absoluteMotorDegrees > 360 || !Double.isFinite(maxCorrectionDegrees)
+                || maxCorrectionDegrees < 0 || maxCorrectionDegrees >= 180.0 / gearRatio) return false;
+        double relativeDegrees = positionDegrees(relativeTicks);
+        double correction = estimateDegrees(absoluteMotorDegrees, relativeDegrees) - relativeDegrees;
+        if (!Double.isFinite(correction) || Math.abs(correction) > maxCorrectionDegrees + 1e-9) return false;
+        initialDegrees += correction;
+        return true;
+    }
+
     public double velocityDegreesPerSecond(double ticksPerSecond) {
         return ticksPerSecond * degreesPerTick;
     }

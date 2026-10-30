@@ -383,6 +383,37 @@ public class SubsystemRegressionTest {
     }
 
     @Test
+    public void parkingPreservesMultipleEncoderTurnsAndSurvivesShooterUpdatesAndStop() {
+        TestHardware hardware = new TestHardware();
+        Shooter.INSTANCE.init(hardware);
+        Shooter.INSTANCE.start();
+        try {
+            // Two motor revolutions: the absolute reading is zero again, but the turret is at 160°.
+            hardware.devices.get("frDrive").values.put("CurrentPosition", 769);
+            Shooter.INSTANCE.setForceTurretZero(true);
+            Turret.INSTANCE.parkAtZero();
+            assertEquals(160, Encoders.INSTANCE.getTrueDegrees(), 1e-9);
+            assertEquals(0, Turret.INSTANCE.getTargetDegrees(), 0);
+            assertTrue(hardware.devices.get("turret").number("Power") < 0);
+
+            Shooter.INSTANCE.toggleMode(Shooter.Mode.AUTO);
+            Shooter.INSTANCE.update(new Pose(54.4, 7.3, Math.PI));
+            Shooter.INSTANCE.update(new Pose(64, 127, Math.PI / 2));
+            assertEquals(0, Turret.INSTANCE.getTargetDegrees(), 0);
+            assertTrue(hardware.devices.get("turret").number("Power") < 0);
+
+            // The route can finish before or after the parking deadline.
+            Shooter.INSTANCE.stop();
+            Turret.INSTANCE.parkAtZero();
+            assertEquals(160, Encoders.INSTANCE.getTrueDegrees(), 1e-9);
+            assertTrue(hardware.devices.get("turret").number("Power") < 0);
+        } finally {
+            Shooter.INSTANCE.stop();
+            Shooter.INSTANCE.setForceTurretZero(false);
+        }
+    }
+
+    @Test
     public void flywheelSkipsIdenticalCommandsWithoutDroppingSmallPowerCorrections() {
         boolean savedAuto = Flywheel.AUTO_DISTANCE_SHOT;
         double savedTarget = Flywheel.TARGET_VELOCITY_TPS;

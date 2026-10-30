@@ -42,8 +42,13 @@ object Rollers {
 
     /** Left encoder supplies feedback; both intake motors receive the same power. */
     fun update(rightTrigger: Float, leftTrigger: Float, gateOpen: Boolean) {
+        update(rightTrigger, leftTrigger, gateOpen, GATE_OPEN_TPS)
+    }
+
+    /** Allows autonomous routines to use a separate gate-open intake target. */
+    fun update(rightTrigger: Float, leftTrigger: Float, gateOpen: Boolean, gateOpenTargetTPS: Double) {
         targetVelocityTPS = when {
-            gateOpen -> GATE_OPEN_TPS
+            gateOpen -> gateOpenTargetTPS
             leftTrigger > 0.2f -> -1200.0
             rightTrigger > 0.2f -> 2800.0
             else -> 0.0

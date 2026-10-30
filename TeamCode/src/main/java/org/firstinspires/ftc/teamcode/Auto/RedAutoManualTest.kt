@@ -11,6 +11,7 @@ import com.pedropathing.ivy.commands.Commands.waitMs
 import com.pedropathing.ivy.groups.Groups.parallel
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
+import com.pedropathing.ivy.pedro.PedroCommands.hold
 import com.pedropathing.math.Pose
 import com.pedropathing.paths.Path
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
@@ -21,19 +22,17 @@ import org.firstinspires.ftc.teamcode.Subsystem.Flowers
 import org.firstinspires.ftc.teamcode.Subsystem.Rollers
 import org.firstinspires.ftc.teamcode.Subsystem.Shooter
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.ShotCalibration
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
+import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
 import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
 import org.firstinspires.ftc.teamcode.pedro.Constants
-import kotlin.math.abs
 import kotlin.math.hypot
 
 @Autonomous(name = "Red Auto Manual Update Test", group = "Red")
 class RedAutoManualTest: OpMode()  {
-    private companion object {
-        const val SHOT_DISTANCE_UPDATE_EPSILON_INCHES = 0.01
-    }
-
     private lateinit var follower: Follower
     private lateinit var fullPathRed: Command
     private lateinit var hubs: List<LynxModule>
@@ -43,16 +42,17 @@ class RedAutoManualTest: OpMode()  {
     private var autoShooting = false
     private var autoIntaking = false
     private var mechanismUpdatesEnabled = false
-    private var shotDistanceInches = Double.NaN
-    private var lastConfiguredShotDistanceInches = Double.NaN
-    private var shotConfigurationStatus = "Not configured"
-    private var shotConfigurationValid = false
+    private var shotTargetValid = false
+    private var autoStartNanos = 0L
+    private var turretParkStarted = false
 
     override fun init() {
         Scheduler.reset()
         autoShooting = false
         autoIntaking = false
         mechanismUpdatesEnabled = false
+        autoStartNanos = 0L
+        turretParkStarted = false
         follower = Constants.create(hardwareMap)
         follower.setPose(start)
         CurrAlliance.Reset()
@@ -60,10 +60,7 @@ class RedAutoManualTest: OpMode()  {
         Shooter.toggleMode(Shooter.Mode.AUTO)
         Shooter.autoFlywheel = 0.0
         Shooter.autoHood = ServoPositions.HOOD_DEFAULT
-        shotDistanceInches = Double.NaN
-        lastConfiguredShotDistanceInches = Double.NaN
-        shotConfigurationStatus = "Waiting for first shot"
-        shotConfigurationValid = false
+        shotTargetValid = false
         shooterInitialized = true
         Rollers.init(hardwareMap)
         rollersInitialized = true
@@ -75,7 +72,8 @@ class RedAutoManualTest: OpMode()  {
 
         fullPathRed = sequential(
             waitMs(1500.0),
-            shootForOneSecond(start),
+            shootForOneSecond(),
+            instant { setShotTarget(openPollenIntake) },
             parallel(
                 setIntaking(true),
                 follow(follower, path1())
@@ -85,25 +83,27 @@ class RedAutoManualTest: OpMode()  {
             follow(follower, Paths.path(path3(), path4())),
             parallel(instant { Flowers.setDown(true) }, follow(follower, openPollenIntake())),
             waitMs(500.0),
-            shootForOneSecond(openPollenIntake),
+            shootForOneSecond(),
             setIntaking(true),
             follow(follower, path6()),
+            hold(follower, point6),
             waitMs(1000.0),
             setIntaking(false),
             follow(follower, path7()),
             waitMs(500.0),
-            shootForOneSecond(point7),
+            shootForOneSecond(),
             follow(follower, path8()),
             follow(follower, path9()),
             follow(follower, path10()),
             parallel(setIntaking(true), follow(follower, openPollenIntake2())),
+            hold(follower, openPollenIntake2),
             waitMs(1000.0),
             setIntaking(false),
             follow(follower, path12()),
             follow(follower, path13()),
             follow(follower, path14()),
             waitMs(500.0),
-            shootForOneSecond(point14),
+            shootForOneSecond(),
             follow(follower, path15()),
             finishAuto()
         )
@@ -111,8 +111,11 @@ class RedAutoManualTest: OpMode()  {
 
     override fun start() {
         hubs.forEach { it.clearBulkCache() }
+        autoStartNanos = System.nanoTime()
+        setShotTarget(start)
         Shooter.start()
         mechanismUpdatesEnabled = true
+        Shooter.update(follower.pose())
         schedule(fullPathRed)
         super.start()
     }
@@ -124,10 +127,19 @@ class RedAutoManualTest: OpMode()  {
 
         val pose = follower.pose()
         CurrAlliance.SelectGoalForY(pose.y())
+        if (!turretParkStarted && autoStartNanos != 0L &&
+            System.nanoTime() - autoStartNanos >= 27_500_000_000L) {
+            Shooter.forceTurretZero = true
+            Turret.parkAtZero()
+            turretParkStarted = true
+        }
         if (mechanismUpdatesEnabled) {
             Shooter.update(pose)
             Shooter.setGate(autoShooting)
-            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen)
+            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen,
+                gateOpenTargetTPS = 1200.0)
+        } else if (turretParkStarted) {
+            Turret.updateToDegrees(0.0)
         }
 
         telemetry.addData("x", pose.x())
@@ -135,10 +147,8 @@ class RedAutoManualTest: OpMode()  {
         telemetry.addData("heading", pose.heading())
         telemetry.addData("Shooting", autoShooting)
         telemetry.addData("Intaking", autoIntaking)
-        telemetry.addData("Shot distance (in)", "%.1f", shotDistanceInches)
-        telemetry.addData("Shot setup", shotConfigurationStatus)
-        telemetry.addData("Flywheel goal (ticks/s)", "%.1f", Shooter.autoFlywheel)
-        telemetry.addData("Hood goal", "%.3f", Shooter.autoHood)
+        telemetry.addData("Turret target / angle / power", "%.1f / %.1f / %.2f",
+            Turret.targetDegrees, Encoders.trueDegrees, Turret.motorPower)
         telemetry.addData("Flower intake", if (Flowers.isDown) "Down" else "Up")
         telemetry.addData("Balls", Breakbeams.ballCount)
         telemetry.addData("Shooter velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
@@ -153,6 +163,7 @@ class RedAutoManualTest: OpMode()  {
     }
 
     override fun stop() {
+        if (::follower.isInitialized) OpModeStorage.autonomousEndPose = follower.pose()
         Scheduler.reset()
         autoShooting = false
         autoIntaking = false
@@ -170,38 +181,30 @@ class RedAutoManualTest: OpMode()  {
         }
     }
 
-    private fun shootForOneSecond(shootingPoint: Pose): Command = sequential(
-        configureShotFor(shootingPoint),
-        instant { autoShooting = shotConfigurationValid },
+    private fun shootForOneSecond(): Command = sequential(
+        instant { autoShooting = shotTargetValid },
         waitMs(1000.0),
         instant { autoShooting = false }
     )
 
-    private fun configureShotFor(shootingPoint: Pose): Command = instant {
+    private fun setShotTarget(shootingPoint: Pose) {
         CurrAlliance.SelectGoalForY(shootingPoint.y())
         val goal = CurrAlliance.CurrGoal
-        shotDistanceInches = hypot(goal.x() - shootingPoint.x(), goal.y() - shootingPoint.y())
-        val distanceChanged = !lastConfiguredShotDistanceInches.isFinite() ||
-            abs(shotDistanceInches - lastConfiguredShotDistanceInches) >= SHOT_DISTANCE_UPDATE_EPSILON_INCHES
-        if (distanceChanged) {
-            lastConfiguredShotDistanceInches = shotDistanceInches
-            val shot = DistanceShotInterpolator.sample(
-                shotDistanceInches,
-                ShotCalibration.DISTANCE_INCHES,
-                ShotCalibration.VELOCITY_TPS,
-                ShotCalibration.HOOD_POSITIONS
-            )
-            if (shot == null) {
-                shotConfigurationValid = false
-                shotConfigurationStatus = "Invalid distance calibration"
-                Shooter.autoFlywheel = 0.0
-                Shooter.autoHood = ServoPositions.HOOD_DEFAULT
-            } else {
-                shotConfigurationValid = true
-                shotConfigurationStatus = if (shot.clamped) "Endpoint calibration used" else "Interpolated"
-                Shooter.autoFlywheel = shot.velocityTPS
-                Shooter.autoHood = shot.hoodPosition
-            }
+        val distance = hypot(goal.x() - shootingPoint.x(), goal.y() - shootingPoint.y())
+        val shot = DistanceShotInterpolator.sample(
+            distance,
+            ShotCalibration.DISTANCE_INCHES,
+            ShotCalibration.VELOCITY_TPS,
+            ShotCalibration.HOOD_POSITIONS
+        )
+        if (shot == null) {
+            shotTargetValid = false
+            Shooter.autoFlywheel = 0.0
+            Shooter.autoHood = ServoPositions.HOOD_DEFAULT
+        } else {
+            shotTargetValid = true
+            Shooter.autoFlywheel = shot.velocityTPS
+            Shooter.autoHood = shot.hoodPosition
         }
     }
 
@@ -214,6 +217,9 @@ class RedAutoManualTest: OpMode()  {
         autoShooting = false
         autoIntaking = false
         Shooter.stop()
+        if (turretParkStarted) {
+            Turret.parkAtZero()
+        }
         Rollers.stop()
         mechanismUpdatesEnabled = false
     }
@@ -227,20 +233,20 @@ class RedAutoManualTest: OpMode()  {
     private val point4 = poseFactory.of(48.0, 115.0, 36.1373)
     private val point4Control1 = poseFactory.of(24.3341, 97.8072, 0.0)
     private val openPollenIntakeStart = poseFactory.of(48.0, 115.0, 35.0)
-    private val openPollenIntake = poseFactory.of(64.0, 128.0, 90.0)
-    private val point6 = poseFactory.of(48.0, 126.4, 90.0)
+    private val openPollenIntake = poseFactory.of(64.0, 127.0, 90.0)
+    private val point6 = poseFactory.of(48.3, 126.8, 90.0)
     private val point6Control1 = poseFactory.of(50.0, 100.0, 0.0)
-    private val point7 = poseFactory.of(64.0, 128.0, 90.0)
+    private val point7 = poseFactory.of(64.0, 127.0, 90.0)
     private val point7Control1 = poseFactory.of(50.0, 100.0, 0.0)
     private val point8 = poseFactory.of(30.0, 90.0, 90.0)
     private val point9 = poseFactory.of(27.0, 61.5, 90.0)
     private val point10Start = poseFactory.of(27.0, 61.5, 90.0)
     private val point10 = poseFactory.of(27.0, 47.5, 180.0)
-    private val openPollenIntake2 = poseFactory.of(15.7, 47.9, 180.0)
-    private val point12Start = poseFactory.of(15.7, 47.9, 180.0)
+    private val openPollenIntake2 = poseFactory.of(15.2, 47.8, 180.0)
+    private val point12Start = poseFactory.of(15.2, 47.8, 180.0)
     private val point12 = poseFactory.of(27.3655, 57.0258, 90.0)
     private val point13 = poseFactory.of(28.0, 111.0, 90.0)
-    private val point14 = poseFactory.of(64.0, 128.0, 90.0)
+    private val point14 = poseFactory.of(64.0, 127.0, 90.0)
     private val path15 = poseFactory.of(10.0, 105.0, 90.0)
 
     fun path1(): Path = Paths.line(start, path1).constant(path1)
@@ -255,6 +261,7 @@ class RedAutoManualTest: OpMode()  {
     fun openPollenIntake(): Path = Paths.line(openPollenIntakeStart, openPollenIntake).linear(openPollenIntakeStart, openPollenIntake)
 
     fun path6(): Path = Paths.curve(openPollenIntake, point6Control1, point6).constant(point6)
+        .with(Constants.foresightConfig.maxPathSpeed.at(0.7))
 
     fun path7(): Path = Paths.curve(point6, point7Control1, point7).constant(point7)
 
@@ -265,6 +272,7 @@ class RedAutoManualTest: OpMode()  {
     fun path10(): Path = Paths.line(point10Start, point10).linear(point10Start, point10)
 
     fun openPollenIntake2(): Path = Paths.line(point10, openPollenIntake2).constant(openPollenIntake2)
+        .with(Constants.foresightConfig.maxPathSpeed.at(0.7))
 
     fun path12(): Path = Paths.line(point12Start, point12).linear(point12Start, point12)
 

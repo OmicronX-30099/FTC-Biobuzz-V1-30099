@@ -19,6 +19,8 @@ public final class TurretConfig {
     // Selects the starting revolution of the motor-side absolute encoder.
     // Keep this within 40 turret degrees of the physical starting angle.
     public static double INITIAL_TURRET_ESTIMATE_DEG = 0.0;
+    // Backup calibration uses the nearest absolute revolution; the absolute pattern repeats every 80°.
+    public static volatile double BACKUP_MAX_CORRECTION_DEG = 15.0;
 
     // The calibrated turret angle increases clockwise; Pedro heading increases counterclockwise.
     public static volatile boolean CLOCKWISE_POSITIVE = true;

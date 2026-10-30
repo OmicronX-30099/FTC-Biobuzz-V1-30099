@@ -19,6 +19,7 @@ object Shooter {
 
     var mode = Mode.NORMAL
         private set
+    var forceTurretZero = false
 
     lateinit var gate: Servo
         private set
@@ -42,6 +43,7 @@ object Shooter {
         private set
     fun init(hardwareMap: HardwareMap) {
         mode = Mode.NORMAL
+        forceTurretZero = false
         sotmEnabled = true
         gate = hardwareMap.get(Servo::class.java, "gate")
         gate.direction = Servo.Direction.FORWARD
@@ -117,16 +119,18 @@ object Shooter {
         predictedShotPose = aimingPose
         if (mode == Mode.BACKUP) {
             shooterPow = Flywheel.updateBackup(aimingPose, shooterVelocity, velocityOffsetTPS)
-            Turret.updateToDegrees(0.0)
+            Turret.updateToDegrees(0.0, recalibrateFromAbsolute = true)
         }
         else if (mode == Mode.AUTO) {
             shooterPow = Flywheel.updateAuto(aimingPose, shooterVelocity, autoFlywheel, autoHood)
-            Turret.update(aimingPose, aimOffsetDegrees)
+            if (forceTurretZero) Turret.updateToDegrees(0.0)
+            else Turret.update(aimingPose, aimOffsetDegrees)
         }
         else
         {
             shooterPow = Flywheel.update(aimingPose, shooterVelocity, velocityOffsetTPS)
-            Turret.update(aimingPose, aimOffsetDegrees)
+            if (forceTurretZero) Turret.updateToDegrees(0.0)
+            else Turret.update(aimingPose, aimOffsetDegrees)
         }
     }
 

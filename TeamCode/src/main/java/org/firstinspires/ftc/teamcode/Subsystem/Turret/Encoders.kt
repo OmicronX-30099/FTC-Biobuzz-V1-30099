@@ -23,6 +23,16 @@ object Encoders {
         private set
     var absoluteMotorDegrees = 0.0
         private set
+    var relativeDegreesAtCalibration = Double.NaN
+        private set
+    var absoluteDegreesAtCalibration = Double.NaN
+        private set
+    var calibrationErrorDegrees = Double.NaN
+        private set
+    var largestCalibrationErrorDegrees = 0.0
+        private set
+    var calibrationAccepted = false
+        private set
 
     fun init(hardwareMap: HardwareMap) {
         absEncoder = hardwareMap.get(AnalogInput::class.java, TurretConfig.ABSOLUTE_ENCODER_NAME)
@@ -36,6 +46,11 @@ object Encoders {
             TurretConfig.ABSOLUTE_ZERO_DEG, TurretConfig.ABSOLUTE_ENCODER_REVERSED,
             TurretConfig.RELATIVE_ENCODER_REVERSED
         )
+        relativeDegreesAtCalibration = Double.NaN
+        absoluteDegreesAtCalibration = Double.NaN
+        calibrationErrorDegrees = Double.NaN
+        largestCalibrationErrorDegrees = 0.0
+        calibrationAccepted = false
         seedAtCurrentPosition()
     }
 
@@ -47,11 +62,26 @@ object Encoders {
         velocityDegreesPerSecond = 0.0
     }
 
-    fun update() {
-        // Absolute angle seeds startup; relative feedback remains fresh every loop.
+    @JvmOverloads
+    fun update(recalibrateFromAbsolute: Boolean = false) {
+        val ticks = relEncoder.currentPosition
         val now = System.nanoTime()
-        if (now - lastAbsoluteReadNanos >= 100_000_000L) readAbsolute()
-        trueDegrees = tracker.positionDegrees(relEncoder.currentPosition)
+        if (now - lastAbsoluteReadNanos >= 100_000_000L) {
+            readAbsolute()
+            if (recalibrateFromAbsolute) {
+                relativeDegreesAtCalibration = tracker.positionDegrees(ticks)
+                absoluteDegreesAtCalibration = tracker.estimateDegrees(absoluteMotorDegrees,
+                    relativeDegreesAtCalibration)
+                calibrationErrorDegrees = absoluteDegreesAtCalibration - relativeDegreesAtCalibration
+                if (calibrationErrorDegrees.isFinite() &&
+                    kotlin.math.abs(calibrationErrorDegrees) > kotlin.math.abs(largestCalibrationErrorDegrees)) {
+                    largestCalibrationErrorDegrees = calibrationErrorDegrees
+                }
+                calibrationAccepted = tracker.correctFromAbsolute(absoluteMotorDegrees, ticks,
+                    TurretConfig.BACKUP_MAX_CORRECTION_DEG)
+            }
+        }
+        trueDegrees = tracker.positionDegrees(ticks)
         velocityDegreesPerSecond = tracker.velocityDegreesPerSecond(relEncoder.velocity)
     }
 

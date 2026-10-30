@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Shooter
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
+import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.Util.BlueAlliance
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.pedro.Constants
@@ -70,11 +71,6 @@ class TeleOpBlueMode: LinearOpMode() {
         resetPoseToStart()
         CurrAlliance.cur = BlueAlliance
         CurrAlliance.SwitchGoal(1)
-        Shooter.init(hardwareMap)
-        shooterInitialized = true
-        Rollers.init(hardwareMap)
-        rollersInitialized = true
-        Flowers.init(hardwareMap)
         Breakbeams.init(hardwareMap)
         hubs = hardwareMap.getAll(LynxModule::class.java)
         originalCacheModes = hubs.map { it.bulkCachingMode }
@@ -83,7 +79,20 @@ class TeleOpBlueMode: LinearOpMode() {
 
     private fun startRobot() {
         hubs.forEach { it.clearBulkCache() }
+        OpModeStorage.autonomousEndPose?.let {
+            follower.setPose(it)
+            follower.update()
+            OpModeStorage.autonomousEndPose = null
+        }
+        // These initializers command hardware positions, so they run only after START.
+        Shooter.init(hardwareMap)
+        shooterInitialized = true
+        Rollers.init(hardwareMap)
+        rollersInitialized = true
+        Flowers.init(hardwareMap)
         Shooter.start()
+        useBackup = true
+        Shooter.toggleMode(Shooter.Mode.BACKUP)
         circleWasPressed = gamepad1.circle || gamepad2.circle
         crossWasPressed = gamepad1.cross || gamepad2.cross
         triangleWasPressed = gamepad1.triangle || gamepad2.triangle
@@ -187,6 +196,13 @@ class TeleOpBlueMode: LinearOpMode() {
             telemetry.addData("Intake power", "%.3f", Rollers.intakePower)
             telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f", Encoders.trueDegrees, Turret.targetDegrees)
             telemetry.addData("Turret power", "%.3f", Turret.motorPower)
+            if (Shooter.mode == Shooter.Mode.BACKUP) {
+                telemetry.addData("Encoder relative / absolute at check (deg)", "%.2f / %.2f",
+                    Encoders.relativeDegreesAtCalibration, Encoders.absoluteDegreesAtCalibration)
+                telemetry.addData("Encoder drift / largest (deg), correction accepted", "%.2f / %.2f / %s",
+                    Encoders.calibrationErrorDegrees, Encoders.largestCalibrationErrorDegrees,
+                    Encoders.calibrationAccepted)
+            }
             telemetry.addData("Aim offset (deg)", "%.1f", shootingOffsets.aimOffsetDegrees)
             telemetry.addData("Shooter trim (ticks/s)", "%.0f", shootingOffsets.velocityTPS)
             telemetry.addData("Flowers", if (Flowers.isDown) "Down" else "Up")

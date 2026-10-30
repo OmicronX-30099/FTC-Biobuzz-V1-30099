@@ -62,11 +62,18 @@ object Turret {
         updateMotor(target, current)
     }
 
-    fun updateToDegrees(targetDegrees: Double) {
+    @JvmOverloads
+    fun updateToDegrees(targetDegrees: Double, recalibrateFromAbsolute: Boolean = false) {
         if (!active) return
-        Encoders.update()
+        Encoders.update(recalibrateFromAbsolute)
         updateBatteryVoltage()
         updateMotor(targetDegrees, Encoders.trueDegrees)
+    }
+
+    /** Resume control using the tracked revolution; parking must not re-seed near zero. */
+    fun parkAtZero() {
+        active = true
+        updateToDegrees(0.0)
     }
 
     private fun updateBatteryVoltage() {
