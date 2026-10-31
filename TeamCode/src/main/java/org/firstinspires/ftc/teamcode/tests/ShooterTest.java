@@ -88,7 +88,7 @@ public class ShooterTest extends LinearOpMode {
     }
 
     private void showInitTelemetry() {
-        telemetryM.addData("Test version", "Shooter Test v11");
+        telemetryM.addData("Test version", "Shooter Test v13");
         telemetryM.addLine("Press START to command shooter.");
         telemetryM.addLine("Right trigger: intake; left trigger: reverse; left bumper: open gate and feed.");
         telemetryM.addLine("Tune target velocity and hood from Dashboard; controller gains match TeleOp.");
@@ -127,8 +127,6 @@ public class ShooterTest extends LinearOpMode {
         lastTelemetryNs = loopStartNs;
         telemetryM.addData("Test version", "Shooter Test v11");
         telemetryM.addData("Gate open", Shooter.INSTANCE.getGateOpen());
-        telemetryM.addData("Intake target velocity (ticks/s)", Rollers.INSTANCE.getTargetVelocityTPS());
-        telemetryM.addData("Intake measured velocity (ticks/s)", Rollers.INSTANCE.getMeasuredVelocityTPS());
         telemetryM.addData("Intake power", Rollers.INSTANCE.getIntakePower());
         telemetryM.addData("Motor mode", flywheel.getMode());
         telemetryM.addData("Current velocity (ticks/s)", velocity);
@@ -152,8 +150,6 @@ public class ShooterTest extends LinearOpMode {
         TelemetryPacket packet = new TelemetryPacket();
         packet.put("Target velocity (ticks/s)", target);
         packet.put("Actual velocity (ticks/s)", velocity);
-        packet.put("Intake target (ticks/s)", Rollers.INSTANCE.getTargetVelocityTPS());
-        packet.put("Intake measured (ticks/s)", Rollers.INSTANCE.getMeasuredVelocityTPS());
         packet.put("Intake power", Rollers.INSTANCE.getIntakePower());
         dashboard.sendTelemetryPacket(packet);
     }

@@ -13,7 +13,7 @@ import com.pedropathing.revhub.localizers.PinpointLocalizer
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
 import org.firstinspires.ftc.teamcode.pedro.Constants
-import org.firstinspires.ftc.teamcode.control.IntakeVelocityController
+import org.firstinspires.ftc.teamcode.Subsystem.Rollers
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 import org.firstinspires.ftc.teamcode.experimental.physics.PhysicsShooter
 import org.firstinspires.ftc.teamcode.experimental.physics.PhysicsShot
@@ -125,10 +125,7 @@ class PhysicsShooterTest : LinearOpMode() {
                     gate.position = if (feed) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
                     gateOpen = feed
                 }
-                val intakeVelocity = left.velocity // only one intake encoder supplies feedback
-                val intakePower = IntakeVelocityController.calculate(if (feed) 1100.0 else 0.0,
-                    intakeVelocity, IntakeVelocityController.DEFAULT_KP,
-                    IntakeVelocityController.DEFAULT_KS, IntakeVelocityController.DEFAULT_KV)
+                val intakePower = if (feed) Rollers.SHOOTING_POWER else 0.0
                 if (intakePower != lastIntakePower) {
                     left.power = intakePower
                     right.power = intakePower

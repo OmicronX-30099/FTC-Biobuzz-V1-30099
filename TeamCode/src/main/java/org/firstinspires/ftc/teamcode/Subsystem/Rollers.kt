@@ -5,19 +5,16 @@ import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
-import org.firstinspires.ftc.teamcode.control.IntakeVelocityController
 import kotlin.math.abs
 
 object Rollers {
-    @JvmField @Volatile var GATE_OPEN_TPS = 1100.0
+    const val INTAKE_POWER = 1.0
+    const val SHOOTING_POWER = 0.5
+    const val REVERSE_POWER = -0.3
     var POWER_EPSILON = 0.01
     var rollBool: Boolean = false
     // full Intake includes both rollers & transfer
     var intakePower: Double = 0.0
-    var targetVelocityTPS: Double = 0.0
-        private set
-    var measuredVelocityTPS: Double = 0.0
-        private set
     lateinit var fullIntake1: DcMotorEx
     lateinit var fullIntake2: DcMotorEx
     fun init(hardwareMap: HardwareMap) {
@@ -29,38 +26,24 @@ object Rollers {
         fullIntake1.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
         fullIntake2.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
         rollBool = false
-        measuredVelocityTPS = 0.0
         stop()
     }
 
     fun stop() {
-        targetVelocityTPS = 0.0
         intakePower = 0.0
         fullIntake1.power = 0.0
         fullIntake2.power = 0.0
     }
 
-    /** Left encoder supplies feedback; both intake motors receive the same power. */
+    /** Shooting takes priority over reverse, then intake; released controls stop both motors. */
     fun update(rightTrigger: Float, leftTrigger: Float, gateOpen: Boolean) {
-        update(rightTrigger, leftTrigger, gateOpen, GATE_OPEN_TPS)
-    }
-
-    /** Allows autonomous routines to use a separate gate-open intake target. */
-    fun update(rightTrigger: Float, leftTrigger: Float, gateOpen: Boolean, gateOpenTargetTPS: Double) {
-        targetVelocityTPS = when {
-            gateOpen -> gateOpenTargetTPS
-            leftTrigger > 0.2f -> -1200.0
-            rightTrigger > 0.2f -> 2800.0
+        val power = when {
+            gateOpen -> SHOOTING_POWER
+            leftTrigger > 0.2f -> REVERSE_POWER
+            rightTrigger > 0.2f -> INTAKE_POWER
             else -> 0.0
         }
-        measuredVelocityTPS = fullIntake1.velocity
-        val power = IntakeVelocityController.calculate(
-            targetVelocityTPS, measuredVelocityTPS,
-            IntakeVelocityController.DEFAULT_KP, IntakeVelocityController.DEFAULT_KS,
-            IntakeVelocityController.DEFAULT_KV
-        )
-        // Preserve small feedback corrections instead of applying the manual power epsilon.
-        interChangePow(power, true)
+        setPower(power)
     }
 
     // usually gonna be at 1.0 power
@@ -74,14 +57,13 @@ object Rollers {
     // Continuous controls can apply power directly without allocating a command each loop.
     @JvmOverloads
     fun setPower(iPow: Double, maxPower: Double = 1.0) {
-        targetVelocityTPS = 0.0
         val power = iPow.coerceIn(-maxPower, maxPower)
         // Enforce a lowered limit even when the change is smaller than POWER_EPSILON.
         interChangePow(power, abs(intakePower) > maxPower)
     }
 
     private fun interChangePow(iPow: Double, force: Boolean) {
-        // Manual changes use the epsilon; velocity feedback corrections bypass it.
+        // Skip insignificant manual changes while always allowing a stop.
         if (iPow == intakePower) return
         if (!force && iPow != 0.0 && abs(intakePower - iPow) <= POWER_EPSILON) return
         intakePower = iPow

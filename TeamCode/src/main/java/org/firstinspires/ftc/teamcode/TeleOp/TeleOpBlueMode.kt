@@ -28,20 +28,20 @@ class TeleOpBlueMode: LinearOpMode() {
     private var lastTelemetryNanos = 0L
     private var circleWasPressed = false
     private var crossWasPressed = false
-    private var triangleWasPressed = false
+    private var squareWasPressed = false
+    private var offsetsResetWasPressed = false
+    private var revolutionLeftWasPressed = false
+    private var revolutionRightWasPressed = false
     private lateinit var hubs: List<LynxModule>
     private lateinit var originalCacheModes: List<LynxModule.BulkCachingMode>
     private var lastControlMs = 0.0
     private var lastTelemetryMs = 0.0
-    private var previousWorkEndNanos = 0L
-    private var schedulerGapMs = 0.0
     private val loopSamples = DoubleArray(100)
     private var loopSampleIndex = 0
     private var loopSampleCount = 0
     private var loopSampleSum = 0.0
     private var shooterInitialized = false
     private var rollersInitialized = false
-    private var useBackup = false;
 
     private companion object {
         const val TELEMETRY_INTERVAL_MS = 200
@@ -91,15 +91,16 @@ class TeleOpBlueMode: LinearOpMode() {
         rollersInitialized = true
         Flowers.init(hardwareMap)
         Shooter.start()
-        useBackup = true
         Shooter.toggleMode(Shooter.Mode.BACKUP)
-        circleWasPressed = gamepad1.circle || gamepad2.circle
-        crossWasPressed = gamepad1.cross || gamepad2.cross
-        triangleWasPressed = gamepad1.triangle || gamepad2.triangle
+        circleWasPressed = gamepad1.circle
+        crossWasPressed = gamepad1.cross
+        squareWasPressed = gamepad1.square
+        offsetsResetWasPressed = gamepad1.triangle || gamepad2.triangle
+        revolutionLeftWasPressed = gamepad2.circle
+        revolutionRightWasPressed = gamepad2.square
         shootingOffsets.seedButtons(dpadLeftPressed(), dpadRightPressed(),
             dpadUpPressed(), dpadDownPressed())
         lastLoopStartNanos = 0L
-        previousWorkEndNanos = 0L
         loopSampleCount = 0
         loopSampleIndex = 0
         loopSampleSum = 0.0
@@ -110,8 +111,6 @@ class TeleOpBlueMode: LinearOpMode() {
         val loopStartNanos = System.nanoTime()
         val previousLoopStartNanos = lastLoopStartNanos
         lastLoopStartNanos = loopStartNanos
-        schedulerGapMs = if (previousWorkEndNanos == 0L) 0.0
-        else (loopStartNanos - previousWorkEndNanos) / 1_000_000.0
         if (previousLoopStartNanos != 0L) {
             val sample = (loopStartNanos - previousLoopStartNanos) / 1_000_000.0
             if (loopSampleCount == loopSamples.size) loopSampleSum -= loopSamples[loopSampleIndex]
@@ -127,20 +126,34 @@ class TeleOpBlueMode: LinearOpMode() {
             gamepad2.rumble(200)
         }
 
-        val circlePressed = gamepad1.circle || gamepad2.circle
+        val circlePressed = gamepad1.circle
         if (circlePressed && !circleWasPressed) resetPoseToStart()
         circleWasPressed = circlePressed
 
-        val crossPressed = gamepad1.cross || gamepad2.cross
+        val crossPressed = gamepad1.cross
         if (crossPressed && !crossWasPressed) {
-            useBackup = !useBackup
-            Shooter.toggleMode(if (useBackup) Shooter.Mode.BACKUP else Shooter.Mode.NORMAL)
+            Shooter.toggleMode(if (Shooter.mode == Shooter.Mode.BACKUP)
+                Shooter.Mode.NORMAL else Shooter.Mode.BACKUP)
         }
         crossWasPressed = crossPressed
 
-        val trianglePressed = gamepad1.triangle || gamepad2.triangle
-        if (trianglePressed && !triangleWasPressed) Shooter.toggleSotm()
-        triangleWasPressed = trianglePressed
+        val squarePressed = gamepad1.square
+        if (squarePressed && !squareWasPressed) Shooter.toggleSotm()
+        squareWasPressed = squarePressed
+        val offsetsResetPressed = gamepad1.triangle || gamepad2.triangle
+        if (offsetsResetPressed && !offsetsResetWasPressed) {
+            shootingOffsets.reset(dpadLeftPressed(), dpadRightPressed(),
+                dpadUpPressed(), dpadDownPressed())
+        }
+        offsetsResetWasPressed = offsetsResetPressed
+        val revolutionLeft = gamepad2.circle
+        val revolutionRight = gamepad2.square
+        if (!(revolutionLeft && revolutionRight)) {
+            if (revolutionLeft && !revolutionLeftWasPressed) Encoders.shiftRevolution(-1)
+            if (revolutionRight && !revolutionRightWasPressed) Encoders.shiftRevolution(1)
+        }
+        revolutionLeftWasPressed = revolutionLeft
+        revolutionRightWasPressed = revolutionRight
 
         follower.manual(-gamepad1.left_stick_y.toDouble(),
             -gamepad1.left_stick_x.toDouble(), -gamepad1.right_stick_x.toDouble())
@@ -172,30 +185,20 @@ class TeleOpBlueMode: LinearOpMode() {
             val loopTimeMs = (loopStartNanos - previousLoopStartNanos) / 1_000_000.0
             telemetry.addData("Robot position (in)", "x: %.2f, y: %.2f", pose.x(), pose.y())
             telemetry.addData("Robot heading (deg)", "%.1f", Math.toDegrees(pose.heading()))
-            val goal = CurrAlliance.CurrGoal
             telemetry.addData("Target goal", if (CurrAlliance.useGoal1) 1 else 2)
-            telemetry.addData("Goal position (in)", "x: %.2f, y: %.2f", goal.x(), goal.y())
-            telemetry.addData("Shooting mode (Cross toggles)", Shooter.mode)
-            telemetry.addData("SOTM (Triangle toggles)", if (Shooter.sotmEnabled) "ON" else "OFF")
+            telemetry.addData("Shooting mode (gamepad 1 Cross/A)", Shooter.mode)
+            telemetry.addData("SOTM (gamepad 1 Square/X)", if (Shooter.sotmEnabled) "ON" else "OFF")
             telemetry.addData("Target flywheel velocity (ticks/s)", "%.1f", Flywheel.flyWheelVelo)
             telemetry.addData("Current flywheel velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
             telemetry.addData("Flywheel raw velocity (ticks/s)", "%.1f", Shooter.rawShooterVelocity)
             telemetry.addData("Hood position", "%.3f", Flywheel.hoodPosition)
             telemetry.addData("Distance to goal (in)", "%.2f", Flywheel.distanceToGoalInches)
-            telemetry.addData("Shot flight time (s)", "%.3f", Shooter.shotFlightTimeSeconds)
-            telemetry.addData("SOTM pose (in)", "x: %.2f, y: %.2f",
-                Shooter.predictedShotPose?.x() ?: pose.x(), Shooter.predictedShotPose?.y() ?: pose.y())
-            telemetry.addData("Shot settings", Flywheel.shotStatus)
             if (Shooter.mode == Shooter.Mode.NORMAL && Flywheel.AUTO_DISTANCE_SHOT) {
                 telemetry.addData("Calibrated / commanded TPS", "%.1f / %.1f",
                     Flywheel.calibratedVelocityTPS, Flywheel.flyWheelVelo)
                 telemetry.addData("Calibration endpoint held", Flywheel.shotClamped)
             }
-            telemetry.addData("Intake target / measured (ticks/s)", "%.1f / %.1f",
-                Rollers.targetVelocityTPS, Rollers.measuredVelocityTPS)
-            telemetry.addData("Intake power", "%.3f", Rollers.intakePower)
             telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f", Encoders.trueDegrees, Turret.targetDegrees)
-            telemetry.addData("Turret power", "%.3f", Turret.motorPower)
             if (Shooter.mode == Shooter.Mode.BACKUP) {
                 telemetry.addData("Encoder relative / absolute at check (deg)", "%.2f / %.2f",
                     Encoders.relativeDegreesAtCalibration, Encoders.absoluteDegreesAtCalibration)
@@ -205,20 +208,14 @@ class TeleOpBlueMode: LinearOpMode() {
             }
             telemetry.addData("Aim offset (deg)", "%.1f", shootingOffsets.aimOffsetDegrees)
             telemetry.addData("Shooter trim (ticks/s)", "%.0f", shootingOffsets.velocityTPS)
-            telemetry.addData("Flowers", if (Flowers.isDown) "Down" else "Up")
-            telemetry.addData("Balls", "%d / 4", Breakbeams.ballCount)
             // Start-to-start timing includes the previous loop's telemetry and SDK overhead.
             telemetry.addData("Loop time (ms)", "%.2f", loopTimeMs)
             var maximum = 0.0
-            var overBudget = 0
             for (i in 0 until loopSampleCount) {
                 maximum = maxOf(maximum, loopSamples[i])
-                if (loopSamples[i] > 20.0) overBudget++
             }
             telemetry.addData("Loop avg / max (last 100, ms)", "%.2f / %.2f",
                 loopSampleSum / loopSampleCount, maximum)
-            telemetry.addData("Loops over 20 ms", "%d / %d", overBudget, loopSampleCount)
-            telemetry.addData("Between-loop gap (ms)", "%.2f", schedulerGapMs)
             telemetry.addData("Control / drive / shooter (ms)", "%.2f / %.2f / %.2f",
                 lastControlMs, (driveEnd - driveStart) / 1_000_000.0,
                 (controlEnd - shooterStart) / 1_000_000.0)
@@ -230,14 +227,13 @@ class TeleOpBlueMode: LinearOpMode() {
             lastTelemetryMs = (System.nanoTime() - telemetryStart) / 1_000_000.0
             lastTelemetryNanos = loopStartNanos
         }
-        previousWorkEndNanos = System.nanoTime()
     }
 
     private fun resetPoseToStart() {
         shootingOffsets.reset(dpadLeftPressed(), dpadRightPressed(),
             dpadUpPressed(), dpadDownPressed())
-        // Mirror the Red start X=8.2 across the field center line x=70.75; 90 degrees is unchanged.
-        follower.setPose(Pose(133.3, 7.3, Math.toRadians(90.0)))
+        // Rotate the Red reset pose 180 degrees around the field center (70.75, 70.75).
+        follower.setPose(Pose(133.3, 134.2, Math.toRadians(270.0)))
     }
 
     private fun dpadLeftPressed() = gamepad1.dpad_left || gamepad2.dpad_left

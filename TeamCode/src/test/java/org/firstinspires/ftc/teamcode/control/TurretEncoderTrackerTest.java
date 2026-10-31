@@ -67,6 +67,24 @@ public class TurretEncoderTrackerTest {
     }
 
     @Test
+    public void manualRevolutionSelectionPreservesFractionAndSurvivesBackupCorrection() {
+        TurretEncoderTracker tracker = tracker(false);
+        tracker.seed(337.5, 1000, 0); // +5 turret degrees
+        tracker.shiftRevolutions(1);
+        assertEquals(85, tracker.positionDegrees(1000), 1e-9);
+        assertTrue(tracker.correctFromAbsolute(337.5, 1000, 15));
+        assertEquals(85, tracker.positionDegrees(1000), 1e-9);
+        assertEquals(245, tracker.positionDegrees(1769), 1e-9);
+        assertEquals(80, tracker.velocityDegreesPerSecond(384.5), 1e-9);
+        tracker.shiftRevolutions(-1);
+        assertEquals(5, tracker.positionDegrees(1000), 1e-9);
+        tracker.shiftRevolutions(-1);
+        assertEquals(-75, tracker.positionDegrees(1000), 1e-9);
+        assertTrue(tracker.correctFromAbsolute(337.5, 1000, 15));
+        assertEquals(-75, tracker.positionDegrees(1000), 1e-9);
+    }
+
+    @Test
     public void backupCorrectionRejectsLargeOrInvalidDiscrepanciesWithoutChangingOffset() {
         TurretEncoderTracker tracker = tracker(false);
         tracker.seed(0, 0, 0);

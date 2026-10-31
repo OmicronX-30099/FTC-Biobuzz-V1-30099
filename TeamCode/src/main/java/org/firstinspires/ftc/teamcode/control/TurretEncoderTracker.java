@@ -40,6 +40,11 @@ public final class TurretEncoderTracker {
         return initialDegrees + (relativeTicks - initialTicks) * degreesPerTick;
     }
 
+    /** Select another absolute-encoder revolution without resetting ticks or fractional angle. */
+    public void shiftRevolutions(int revolutions) {
+        initialDegrees += revolutions * (360.0 / gearRatio);
+    }
+
     /** Correct drift using the nearest absolute revolution, preserving relative velocity and ticks. */
     public boolean correctFromAbsolute(double absoluteMotorDegrees, int relativeTicks,
                                        double maxCorrectionDegrees) {

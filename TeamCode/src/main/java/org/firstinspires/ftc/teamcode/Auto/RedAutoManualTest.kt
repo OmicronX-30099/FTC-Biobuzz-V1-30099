@@ -136,8 +136,7 @@ class RedAutoManualTest: OpMode()  {
         if (mechanismUpdatesEnabled) {
             Shooter.update(pose)
             Shooter.setGate(autoShooting)
-            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen,
-                gateOpenTargetTPS = 1200.0)
+            Rollers.update(if (autoIntaking) 1.0f else 0.0f, 0.0f, Shooter.gateOpen)
         } else if (turretParkStarted) {
             Turret.updateToDegrees(0.0)
         }
@@ -152,7 +151,6 @@ class RedAutoManualTest: OpMode()  {
         telemetry.addData("Flower intake", if (Flowers.isDown) "Down" else "Up")
         telemetry.addData("Balls", Breakbeams.ballCount)
         telemetry.addData("Shooter velocity (ticks/s)", "%.1f", Shooter.shooterVelocity)
-        telemetry.addData("Intake target velocity (ticks/s)", "%.1f", Rollers.targetVelocityTPS)
 
         if (follower.currentPath() != null) {
             telemetry.addData("Current path distance remaining", follower.distanceToEndpoint())

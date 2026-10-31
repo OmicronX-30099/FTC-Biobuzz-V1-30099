@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
-import org.firstinspires.ftc.teamcode.control.IntakeVelocityController
+import org.firstinspires.ftc.teamcode.Subsystem.Rollers
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 import org.firstinspires.ftc.teamcode.experimental.physics.CalibrationLog
 import org.firstinspires.ftc.teamcode.experimental.physics.CalibrationSettings
@@ -149,10 +149,7 @@ class ShooterCalibrationCollector : LinearOpMode() {
                     gate.position = if (feed) ServoPositions.GATE_OPEN else ServoPositions.GATE_CLOSED
                     gateOpen = feed
                 }
-                val velocity = left.velocity
-                val transferPower = IntakeVelocityController.calculate(if (feed) 1100.0 else 0.0,
-                    velocity, IntakeVelocityController.DEFAULT_KP, IntakeVelocityController.DEFAULT_KS,
-                    IntakeVelocityController.DEFAULT_KV)
+                val transferPower = if (feed) Rollers.SHOOTING_POWER else 0.0
                 if (transferPower != intakePower) {
                     left.power = transferPower; right.power = transferPower; intakePower = transferPower
                 }

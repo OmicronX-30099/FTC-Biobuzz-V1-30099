@@ -15,7 +15,6 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders;
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Proxy;
@@ -25,17 +24,8 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class SubsystemRegressionTest {
-    private double savedGateOpenTPS;
-
-    @Before
-    public void useExplicitIntakeCalibration() {
-        savedGateOpenTPS = Rollers.GATE_OPEN_TPS;
-        Rollers.GATE_OPEN_TPS = 1100;
-    }
-
     @After
     public void clearCommands() {
-        Rollers.GATE_OPEN_TPS = savedGateOpenTPS;
         Scheduler.reset();
     }
 
@@ -129,80 +119,37 @@ public class SubsystemRegressionTest {
     }
 
     @Test
-    public void intakeVelocityControlUsesLeftFeedbackAndPrioritizesTheOpenGate() {
+    public void fixedIntakePowersIgnoreEncoderVelocityAndPrioritizeShootingThenReverse() {
         TestHardware hardware = new TestHardware();
         Rollers.INSTANCE.init(hardware);
         Device left = hardware.devices.get("left_intake");
         Device right = hardware.devices.get("right_intake");
         assertEquals(DcMotorSimple.Direction.FORWARD, left.values.get("Direction"));
         assertEquals(DcMotorSimple.Direction.REVERSE, right.values.get("Direction"));
-
-        Rollers.INSTANCE.update(0.2f, 0.0f, false);
-        assertEquals(0, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertEquals(0, left.number("Power"), 0);
-        left.values.put("Velocity", 3000.0);
-        right.values.put("Velocity", -5000.0); // Must not affect control.
-        Rollers.INSTANCE.update(0.2001f, 0.0f, false);
-        assertEquals(2800, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertEquals(0.89, left.number("Power"), 1e-12);
-        assertEquals(left.number("Power"), right.number("Power"), 0);
-
-        // A small feedback correction must not be swallowed by the manual power epsilon.
-        left.values.put("Velocity", 3005.0);
-        Rollers.INSTANCE.update(1.0f, 0.0f, false);
-        assertEquals(0.887, left.number("Power"), 1e-12);
-        assertEquals(left.number("Power"), right.number("Power"), 0);
-
-        left.values.put("Velocity", 1100.0);
-        Rollers.INSTANCE.update(1.0f, 0.0f, true);
-        assertEquals(1100, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertEquals(0.415, left.number("Power"), 1e-12);
-        Rollers.INSTANCE.update(0.0f, 0.0f, true);
-        assertEquals(1100, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertEquals(0.415, right.number("Power"), 1e-12);
-        Rollers.INSTANCE.update(0.0f, 0.0f, false);
-        assertEquals(0, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
+        assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, left.values.get("Mode"));
+        assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, right.values.get("Mode"));
+        float[][] inputs = {{0.2f, 0.2f}, {0.2001f, 0}, {1, 0}, {0, 0.2001f}, {1, 1}, {0, 0}};
+        double[] powers = {0, 1, 1, -0.3, -0.3, 0};
+        for (int i = 0; i < inputs.length; i++) {
+            left.values.put("Velocity", i % 2 == 0 ? Double.NaN : 5000.0);
+            Rollers.INSTANCE.update(inputs[i][0], inputs[i][1], false);
+            assertEquals(powers[i], left.number("Power"), 0);
+            assertEquals(powers[i], right.number("Power"), 0);
+            // Shooting feeds at fixed power regardless of either trigger or encoder feedback.
+            Rollers.INSTANCE.update(inputs[i][0], inputs[i][1], true);
+            assertEquals(0.5, left.number("Power"), 0);
+            assertEquals(0.5, right.number("Power"), 0);
+        }
+        Rollers.INSTANCE.update(0, 0, false);
         assertEquals(0, left.number("Power"), 0);
         assertEquals(0, right.number("Power"), 0);
-        assertEquals(6, left.calls("getVelocity"));
-        assertEquals(0, right.calls("getVelocity"));
-
-        Rollers.INSTANCE.update(1.0f, 0.0f, false);
+        Rollers.INSTANCE.update(1, 0, false);
         Rollers.INSTANCE.stop();
-        assertEquals(0, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
         assertEquals(0, left.number("Power"), 0);
         assertEquals(0, right.number("Power"), 0);
-    }
-
-    @Test
-    public void leftTriggerReversesBothIntakesWithGateOverride() {
-        TestHardware hardware = new TestHardware();
-        Rollers.INSTANCE.init(hardware);
-        Device left = hardware.devices.get("left_intake");
-        Device right = hardware.devices.get("right_intake");
-
-        Rollers.INSTANCE.update(0.0f, 0.2f, false);
-        assertEquals(0, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        left.values.put("Velocity", -2000.0);
-        Rollers.INSTANCE.update(0.0f, 0.2001f, false);
-        assertEquals(-2000, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertEquals(-0.73, left.number("Power"), 1e-12);
-        assertEquals(left.number("Power"), right.number("Power"), 0);
-
-        Rollers.INSTANCE.update(1.0f, 1.0f, false);
-        assertEquals(-2000, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        Rollers.INSTANCE.update(1.0f, 1.0f, true);
-        assertEquals(1100, Rollers.INSTANCE.getTargetVelocityTPS(), 0);
-        assertTrue(left.number("Power") > 0);
-        assertEquals(left.number("Power"), right.number("Power"), 0);
-
-        Rollers.INSTANCE.update(0.0f, 0.0f, false);
-        assertEquals(0, left.number("Power"), 0);
-        assertEquals(0, right.number("Power"), 0);
+        assertEquals(0, left.calls("getVelocity"));
         assertEquals(0, right.calls("getVelocity"));
-        Rollers.INSTANCE.stop();
     }
-
     @Test
     public void driveSkipsDuplicateWritesWithoutLosingSmallInputChanges() {
         TestHardware hardware = new TestHardware();
@@ -379,6 +326,39 @@ public class SubsystemRegressionTest {
         } finally {
             Turret.INSTANCE.stop();
             CurrAlliance.INSTANCE.setCurrGoal(savedGoal);
+        }
+    }
+
+    @Test
+    public void backupCorrectsFiveDegreeAbsoluteErrorAndKeepsDrivingAfterModeToggles()
+            throws InterruptedException {
+        TestHardware hardware = new TestHardware();
+        Shooter.INSTANCE.init(hardware);
+        Shooter.INSTANCE.start();
+        try {
+            // Relative ticks still report zero; reversed motor-side absolute reports +5 turret degrees.
+            hardware.absoluteVoltage = 3.3 * (360.0 - 5.0 * 4.5) / 360.0;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                Shooter.INSTANCE.toggleMode(Shooter.Mode.NORMAL);
+                Shooter.INSTANCE.update(new Pose(54.4, 7.3, Math.PI));
+                Shooter.INSTANCE.toggleMode(Shooter.Mode.BACKUP);
+                Thread.sleep(110); // Allow the production 100 ms absolute sampling interval.
+                Shooter.INSTANCE.update(new Pose(54.4, 7.3, Math.PI));
+                assertTrue(Encoders.INSTANCE.getCalibrationAccepted());
+                assertEquals(5, Encoders.INSTANCE.getAbsoluteDegreesAtCalibration(), 1e-9);
+                assertEquals(5, Encoders.INSTANCE.getTrueDegrees(), 1e-9);
+                assertEquals(0, Turret.INSTANCE.getTargetDegrees(), 0);
+                assertEquals(-0.225, Turret.INSTANCE.getMotorPower(), 1e-9);
+            }
+            // Once both sensors reach forward, it should stop rather than keep applying an offset.
+            hardware.devices.get("frDrive").values.put("CurrentPosition", -24);
+            hardware.absoluteVoltage = 0;
+            Thread.sleep(110);
+            Shooter.INSTANCE.update(new Pose(54.4, 7.3, Math.PI));
+            assertEquals(0, Encoders.INSTANCE.getTrueDegrees(), 1e-9);
+            assertEquals(0, Turret.INSTANCE.getMotorPower(), 0);
+        } finally {
+            Shooter.INSTANCE.stop();
         }
     }
 

@@ -85,6 +85,17 @@ object Encoders {
         velocityDegreesPerSecond = tracker.velocityDegreesPerSecond(relEncoder.velocity)
     }
 
+    /** Manual turn selection; only accept angles inside the configured turret travel. */
+    fun shiftRevolution(direction: Int) {
+        if (direction != -1 && direction != 1) return
+        val ticks = relEncoder.currentPosition
+        val corrected = tracker.positionDegrees(ticks) +
+            direction * 360.0 / TurretConfig.MOTOR_REVS_PER_TURRET_REV
+        if (corrected < TurretConfig.MIN_ANGLE_DEG || corrected > TurretConfig.MAX_ANGLE_DEG) return
+        tracker.shiftRevolutions(direction)
+        trueDegrees = tracker.positionDegrees(ticks)
+    }
+
     private fun readAbsolute() {
         absoluteVoltage = absEncoder.voltage
         absoluteMotorDegrees = absoluteVoltage / fullScaleVolts * 360.0
