@@ -9,7 +9,7 @@ import kotlin.math.abs
 
 object Rollers {
     const val INTAKE_POWER = 1.0
-    const val SHOOTING_POWER = 0.5
+    const val SHOOTING_POWER = 0.45
     const val REVERSE_VELOCITY_TPS = -800.0
     var POWER_EPSILON = 0.01
     var rollBool: Boolean = false

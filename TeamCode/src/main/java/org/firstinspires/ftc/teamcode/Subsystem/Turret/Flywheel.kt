@@ -4,12 +4,14 @@ import com.pedropathing.math.Pose
 import com.acmerobotics.dashboard.config.Config
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorEx
+import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.hardware.Servo
 import com.qualcomm.robotcore.hardware.VoltageSensor
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
+import org.firstinspires.ftc.teamcode.control.DistanceShotModel
 import org.firstinspires.ftc.teamcode.control.FlywheelVelocityKalman
 import org.firstinspires.ftc.teamcode.control.ShooterVelocityController
 import kotlin.math.exp
@@ -36,6 +38,7 @@ object Flywheel {
     @JvmField @Volatile var VOLTAGE_COMPENSATION_ENABLED: Boolean = false
     @JvmField @Volatile var AUTO_DISTANCE_SHOT: Boolean = true
     @JvmField @Volatile var TARGET_VELOCITY_TPS: Double = 1600.0
+    @JvmField @Volatile var KALMAN_FILTER_ENABLED: Boolean = false
     @JvmField @Volatile var KALMAN_PROCESS_NOISE_TPS: Double = 20.0
     @JvmField @Volatile var KALMAN_MEASUREMENT_NOISE_TPS: Double = 30.0
 
@@ -54,8 +57,12 @@ object Flywheel {
     var goalTargetX: Double = 0.0
     var goalTargetY: Double = 0.0
     const val DEFAULT_KP: Double = 0.003
-    const val DEFAULT_KS: Double = 0.04
-    const val DEFAULT_KV: Double = 0.00038
+    const val DEFAULT_KS: Double = 0.06
+    const val DEFAULT_KV: Double = 0.000357
+    // Live Dashboard gains shared by manual, distance, backup, and auto shots.
+    @JvmField @Volatile var KP: Double = DEFAULT_KP
+    @JvmField @Volatile var KS: Double = DEFAULT_KS
+    @JvmField @Volatile var KV: Double = DEFAULT_KV
     var flyWheelVelo: Double = 0.0
     lateinit var shooter: DcMotorEx
         private set
@@ -72,6 +79,7 @@ object Flywheel {
         lastMotorPower = 0.0
         shooter.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
         shooter.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.FLOAT
+        shooter.direction = DcMotorSimple.Direction.REVERSE
         batterySensor = hardwareMap.voltageSensor.firstOrNull()
         previousVoltage = Double.NaN
         olderVoltage = Double.NaN
@@ -94,8 +102,12 @@ object Flywheel {
         update(pose, filterVelocity(shooter.velocity))
     }
 
-    /** Kalman-filter a raw encoder velocity sample before feeding velocity control. */
+    /** Use raw encoder feedback unless Kalman filtering is explicitly enabled. */
     fun filterVelocity(measuredVelocityTPS: Double): Double {
+        if (!KALMAN_FILTER_ENABLED) {
+            resetVelocityFilter(measuredVelocityTPS)
+            return measuredVelocityTPS
+        }
         return velocityFilter.update(measuredVelocityTPS,
             KALMAN_PROCESS_NOISE_TPS, KALMAN_MEASUREMENT_NOISE_TPS)
     }
@@ -114,8 +126,8 @@ object Flywheel {
         var requestedHoodPosition = HOOD_POSITION
         val baseVelocityTPS: Double
         if (AUTO_DISTANCE_SHOT) {
-            if (!DistanceShotInterpolator.sampleInto(distanceToGoalInches,
-                    ShotCalibration.DISTANCE_INCHES, ShotCalibration.VELOCITY_TPS,
+            if (!DistanceShotModel.sampleInto(distanceToGoalInches,
+                    ShotCalibration.DISTANCE_INCHES,
                     ShotCalibration.HOOD_POSITIONS, distanceShot)) {
                 return stopInvalidShot("Distance calibration invalid - shooter stopped")
             }
@@ -123,8 +135,8 @@ object Flywheel {
             requestedHoodPosition = distanceShot.hoodPosition
             calibratedVelocityTPS = baseVelocityTPS
             shotClamped = distanceShot.clamped
-            shotStatus = if (distanceShot.clamped) "Distance calibration: endpoint held"
-            else "Distance calibration: interpolated"
+            shotStatus = if (distanceShot.clamped) "Polynomial velocity; hood endpoint held"
+            else "Polynomial velocity; interpolated hood"
         } else {
             clearLutDiagnostics()
             baseVelocityTPS = TARGET_VELOCITY_TPS
@@ -174,7 +186,7 @@ object Flywheel {
             REFERENCE_VOLTAGE / filteredBatteryVoltage
         } else 1.0
         val power = ShooterVelocityController.calculate(flyWheelVelo, currentVelocity,
-            DEFAULT_KP, DEFAULT_KS, DEFAULT_KV, voltageScale)
+            KP, KS, KV, voltageScale)
         applyMotorPower(power)
         return power
     }

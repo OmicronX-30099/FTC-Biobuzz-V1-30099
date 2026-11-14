@@ -9,6 +9,40 @@ import static org.junit.Assert.*;
 
 public class AllianceTest {
     @Test
+    public void turretAimIsIndependentOfRangeGoalAndFollowsAllianceSelection() {
+        CurrAlliance current = CurrAlliance.INSTANCE;
+        Alliance savedAlliance = current.getCur();
+        boolean savedUseGoal1 = current.getUseGoal1();
+        Pose savedGoal = current.getCurrGoal();
+        double aimX = RedAlliance.AIM_1_X;
+        double goalY = RedAlliance.GOAL_1_Y;
+        try {
+            current.Reset();
+            assertNotSame(current.getCurrGoal(), current.getCurrAim());
+            assertEquals(current.getCurrGoal().x(), current.getCurrAim().x(), 0);
+            assertEquals(current.getCurrGoal().y(), current.getCurrAim().y(), 0);
+            double rangeX = current.getCurrGoal().x();
+            RedAlliance.AIM_1_X += 5;
+            assertEquals(rangeX, current.getCurrGoal().x(), 0);
+            assertEquals(aimX + 5, current.getCurrAim().x(), 0);
+            RedAlliance.GOAL_1_Y += 3;
+            assertEquals(goalY, current.getCurrAim().y(), 0);
+            current.ToggleGoal();
+            assertSame(RedAlliance.INSTANCE.getAimPose2(), current.getCurrAim());
+            current.setCur(BlueAlliance.INSTANCE);
+            assertSame(BlueAlliance.INSTANCE.getAimPose2(), current.getCurrAim());
+            current.ToggleGoal();
+            assertSame(BlueAlliance.INSTANCE.getAimPose1(), current.getCurrAim());
+        } finally {
+            RedAlliance.AIM_1_X = aimX;
+            RedAlliance.GOAL_1_Y = goalY;
+            current.setCur(savedAlliance);
+            current.SwitchGoal(savedUseGoal1 ? 1 : 2);
+            current.setCurrGoal(savedGoal);
+        }
+    }
+
+    @Test
     public void selectsGoalFromActualYWithGoalOneAtTheBoundary() {
         CurrAlliance current = CurrAlliance.INSTANCE;
         Alliance savedAlliance = current.getCur();

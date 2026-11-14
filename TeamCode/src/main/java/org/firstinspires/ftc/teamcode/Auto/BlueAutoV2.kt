@@ -28,7 +28,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Util.BlueAlliance
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
-import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
+import org.firstinspires.ftc.teamcode.control.DistanceShotModel
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import kotlin.math.hypot
 
@@ -186,9 +186,9 @@ class BlueAutoV2 : OpMode() {
     private fun setShotTarget(point: Pose) {
         CurrAlliance.SelectGoalForY(point.y())
         val goal = CurrAlliance.CurrGoal
-        val shot = DistanceShotInterpolator.sample(
+        val shot = DistanceShotModel.sample(
             hypot(goal.x() - point.x(), goal.y() - point.y()),
-            ShotCalibration.DISTANCE_INCHES, ShotCalibration.VELOCITY_TPS,
+            ShotCalibration.DISTANCE_INCHES,
             ShotCalibration.HOOD_POSITIONS
         )
         shotTargetValid = shot != null

@@ -51,7 +51,7 @@ object Turret {
         Encoders.update()
         updateBatteryVoltage()
         val current = Encoders.trueDegrees
-        val goal = CurrAlliance.CurrGoal
+        val goal = CurrAlliance.CurrAim
         val minAngle = TurretConfig.MIN_ANGLE_DEG
         val maxAngle = TurretConfig.MAX_ANGLE_DEG
         val safeAimOffsetDegrees = if (aimOffsetDegrees.isFinite()) aimOffsetDegrees else 0.0

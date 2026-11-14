@@ -17,6 +17,10 @@ object  CurrAlliance {
         get() = goalOverride ?: if (useGoal1) cur.GoalPose1 else cur.GoalPose2
         set(value) { goalOverride = value }
 
+    // A separate target for turret heading; range and flight time keep using CurrGoal.
+    val CurrAim: Pose
+        get() = if (useGoal1) cur.AimPose1 else cur.AimPose2
+
     fun Reset() {
         cur = RedAlliance
         SwitchGoal(1)

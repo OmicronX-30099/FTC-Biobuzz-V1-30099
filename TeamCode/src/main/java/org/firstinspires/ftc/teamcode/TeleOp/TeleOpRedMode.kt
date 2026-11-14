@@ -193,7 +193,7 @@ class TeleOpRedMode: LinearOpMode() {
             if (Shooter.mode == Shooter.Mode.NORMAL && Flywheel.AUTO_DISTANCE_SHOT) {
                 telemetry.addData("Calibrated / commanded TPS", "%.1f / %.1f",
                     Flywheel.calibratedVelocityTPS, Flywheel.flyWheelVelo)
-                telemetry.addData("Calibration endpoint held", Flywheel.shotClamped)
+                telemetry.addData("Hood calibration endpoint held", Flywheel.shotClamped)
             }
             telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f", Encoders.trueDegrees, Turret.targetDegrees)
             if (Shooter.mode == Shooter.Mode.BACKUP) {

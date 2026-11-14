@@ -162,7 +162,7 @@ class TurretAutoTune : OpMode() {
             command(run.commandGains)
         } else if (preview != "OFF" && run?.state == TurretAutoTuner.State.COMPLETE) {
             val pose = follower.pose()
-            val goal = CurrAlliance.CurrGoal
+            val goal = CurrAlliance.CurrAim
             target = TurretAiming.targetDegrees(pose.x(), pose.y(), pose.heading(), goal.x(), goal.y(),
                 Encoders.trueDegrees, TurretConfig.MIN_ANGLE_DEG, TurretConfig.MAX_ANGLE_DEG,
                 TurretConfig.CLOCKWISE_POSITIVE)

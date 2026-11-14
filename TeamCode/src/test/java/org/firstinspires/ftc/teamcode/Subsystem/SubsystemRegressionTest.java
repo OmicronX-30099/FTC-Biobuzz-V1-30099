@@ -476,6 +476,46 @@ public class SubsystemRegressionTest {
     }
 
     @Test
+    public void autoShooterUsesLiveGainsWithoutReinitializingHardware() {
+        double savedKP = Flywheel.KP;
+        double savedKS = Flywheel.KS;
+        double savedKV = Flywheel.KV;
+        boolean savedVoltageCompensation = Flywheel.VOLTAGE_COMPENSATION_ENABLED;
+        TestHardware hardware = new TestHardware();
+        try {
+            Flywheel.VOLTAGE_COMPENSATION_ENABLED = false;
+            Flywheel.KP = 0.001;
+            Flywheel.KS = 0.04;
+            Flywheel.KV = 0.00038;
+            Flywheel.INSTANCE.init(hardware);
+            Device motor = hardware.devices.get("shooter");
+            Pose pose = new Pose(0, 0);
+            Flywheel.INSTANCE.updateAuto(pose, 900, 1000, ServoPositions.HOOD_DEFAULT);
+            assertEquals(0.52, motor.number("Power"), 1e-12);
+
+            Flywheel.KP = 0.002;
+            Flywheel.INSTANCE.updateAuto(pose, 900, 1000, ServoPositions.HOOD_DEFAULT);
+            assertEquals(0.62, motor.number("Power"), 1e-12);
+            Flywheel.KS = 0.08;
+            Flywheel.INSTANCE.updateAuto(pose, 900, 1000, ServoPositions.HOOD_DEFAULT);
+            assertEquals(0.66, motor.number("Power"), 1e-12);
+            Flywheel.KV = 0.0004;
+            Flywheel.INSTANCE.updateAuto(pose, 900, 1000, ServoPositions.HOOD_DEFAULT);
+            assertEquals(0.68, motor.number("Power"), 1e-12);
+
+            Flywheel.KP = Double.NaN;
+            Flywheel.INSTANCE.updateAuto(pose, 900, 1000, ServoPositions.HOOD_DEFAULT);
+            assertEquals(0, motor.number("Power"), 0);
+        } finally {
+            Flywheel.INSTANCE.stop();
+            Flywheel.KP = savedKP;
+            Flywheel.KS = savedKS;
+            Flywheel.KV = savedKV;
+            Flywheel.VOLTAGE_COMPENSATION_ENABLED = savedVoltageCompensation;
+        }
+    }
+
+    @Test
     public void flywheelUsesLiveDashboardTargetWithoutResettingItAtInit() {
         boolean savedAuto = Flywheel.AUTO_DISTANCE_SHOT;
         Flywheel.AUTO_DISTANCE_SHOT = false;

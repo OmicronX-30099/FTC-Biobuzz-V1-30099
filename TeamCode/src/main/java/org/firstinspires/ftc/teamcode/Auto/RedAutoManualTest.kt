@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
-import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
+import org.firstinspires.ftc.teamcode.control.DistanceShotModel
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import kotlin.math.hypot
 
@@ -189,10 +189,9 @@ class RedAutoManualTest: OpMode()  {
         CurrAlliance.SelectGoalForY(shootingPoint.y())
         val goal = CurrAlliance.CurrGoal
         val distance = hypot(goal.x() - shootingPoint.x(), goal.y() - shootingPoint.y())
-        val shot = DistanceShotInterpolator.sample(
+        val shot = DistanceShotModel.sample(
             distance,
             ShotCalibration.DISTANCE_INCHES,
-            ShotCalibration.VELOCITY_TPS,
             ShotCalibration.HOOD_POSITIONS
         )
         if (shot == null) {

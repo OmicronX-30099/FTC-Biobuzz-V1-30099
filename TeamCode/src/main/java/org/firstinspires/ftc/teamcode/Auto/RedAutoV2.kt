@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.ShotCalibration
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.Util.ServoPositions
-import org.firstinspires.ftc.teamcode.control.DistanceShotInterpolator
+import org.firstinspires.ftc.teamcode.control.DistanceShotModel
 import org.firstinspires.ftc.teamcode.pedro.Constants
 import kotlin.math.hypot
 
@@ -184,9 +184,9 @@ class RedAutoV2 : OpMode() {
     private fun setShotTarget(point: Pose) {
         CurrAlliance.SelectGoalForY(point.y())
         val goal = CurrAlliance.CurrGoal
-        val shot = DistanceShotInterpolator.sample(
+        val shot = DistanceShotModel.sample(
             hypot(goal.x() - point.x(), goal.y() - point.y()),
-            ShotCalibration.DISTANCE_INCHES, ShotCalibration.VELOCITY_TPS,
+            ShotCalibration.DISTANCE_INCHES,
             ShotCalibration.HOOD_POSITIONS
         )
         shotTargetValid = shot != null
@@ -217,7 +217,7 @@ class RedAutoV2 : OpMode() {
     private val shoottopflower = poseFactory.of(34.0, 130.0, 90.0)
     private val shoottopflowerControl1 = poseFactory.of(34.0, 100.0, 0.0)
     private val intakesideflowerpart1 = poseFactory.of(34.0, 47.8, 90.0)
-    private val intakesideflowerpart2 = poseFactory.of(14.5, 47.8, 180.0)
+    private val intakesideflowerpart2 = poseFactory.of(14.5 , 47.8, 180.0)
     private val shootsideflowerpart1 = poseFactory.of(30.0, 47.8, 180.0)
     private val shootsideflowerpart2 = poseFactory.of(34.0, 130.0, 90.0)
     private val park = poseFactory.of(10.0, 115.0, 90.0)
