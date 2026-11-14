@@ -217,7 +217,7 @@ class RedAutoV2 : OpMode() {
     private val shoottopflower = poseFactory.of(34.0, 130.0, 90.0)
     private val shoottopflowerControl1 = poseFactory.of(34.0, 100.0, 0.0)
     private val intakesideflowerpart1 = poseFactory.of(34.0, 47.8, 90.0)
-    private val intakesideflowerpart2 = poseFactory.of(14.0, 47.8, 180.0)
+    private val intakesideflowerpart2 = poseFactory.of(14.5, 47.8, 180.0)
     private val shootsideflowerpart1 = poseFactory.of(30.0, 47.8, 180.0)
     private val shootsideflowerpart2 = poseFactory.of(34.0, 130.0, 90.0)
     private val park = poseFactory.of(10.0, 115.0, 90.0)

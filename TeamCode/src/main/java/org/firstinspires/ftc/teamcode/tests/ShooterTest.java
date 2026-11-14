@@ -5,6 +5,7 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.pedropathing.math.Pose;
+import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -13,9 +14,13 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.Subsystem.Rollers;
 import org.firstinspires.ftc.teamcode.Subsystem.Shooter;
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders;
+import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret;
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel;
 import org.firstinspires.ftc.teamcode.control.ShooterRecoveryTimer;
+import org.firstinspires.ftc.teamcode.Util.CurrAlliance;
 import org.firstinspires.ftc.teamcode.Util.ServoPositions;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +34,7 @@ import java.util.List;
 public class ShooterTest extends LinearOpMode {
     private static final int TELEMETRY_INTERVAL_MS = 200;
     private static final long TELEMETRY_INTERVAL_NS = TELEMETRY_INTERVAL_MS * 1_000_000L;
-    private static final Pose TEST_POSE = new Pose(0, 0, 0);
+    private static final Pose START_POSE = new Pose(8.2, 7.3, Math.toRadians(90.0));
     public static volatile double TARGET_VELOCITY_TPS = 1500.0;
     public static volatile double HOOD_POSITION = ServoPositions.HOOD_DEFAULT;
 
@@ -39,6 +44,9 @@ public class ShooterTest extends LinearOpMode {
     public static volatile double RECOVERY_SETTLE_MS = 20.0;
 
     private DcMotorEx flywheel;
+    private PinpointLocalizer localizer;
+    private boolean turretTracking;
+    private boolean turretToggleWasPressed;
     private boolean shooterInitialized;
     private boolean rollersInitialized;
     private List<LynxModule> hubs;
@@ -56,6 +64,7 @@ public class ShooterTest extends LinearOpMode {
             initializeRobot();
             waitForStart();
             if (isStopRequested()) return;
+            turretToggleWasPressed = gamepad1.a;
             lastTelemetryNs = System.nanoTime() - TELEMETRY_INTERVAL_NS;
             lastLoopStartNs = 0;
             maximumLoopIntervalMs = 0;
@@ -78,6 +87,9 @@ public class ShooterTest extends LinearOpMode {
         shooterInitialized = true;
         Shooter.INSTANCE.toggleMode(Shooter.Mode.AUTO);
         flywheel = Shooter.INSTANCE.getShooter();
+        CurrAlliance.INSTANCE.Reset();
+        localizer = new PinpointLocalizer(hardwareMap, Constants.localizerConfig);
+        localizer.setPose(START_POSE);
         Rollers.INSTANCE.init(hardwareMap);
         rollersInitialized = true;
 
@@ -88,11 +100,11 @@ public class ShooterTest extends LinearOpMode {
     }
 
     private void showInitTelemetry() {
-        telemetryM.addData("Test version", "Shooter Test v13");
+        telemetryM.addData("Test version", "Shooter Test v14");
         telemetryM.addLine("Press START to command shooter.");
-        telemetryM.addLine("Right trigger: intake; left trigger: reverse; left bumper: open gate and feed.");
-        telemetryM.addLine("Tune target velocity and hood from Dashboard; controller gains match TeleOp.");
-        telemetryM.addLine("Turret stays inactive during this stationary shooter test.");
+        telemetryM.addLine("Right trigger: intake; left trigger: reverse; hold left bumper to open gate and feed.");
+        telemetryM.addLine("Dashboard: ShooterTest/Flywheel shot controls.");
+        telemetryM.addLine("A toggles turret goal tracking. Place robot at (8.2, 7.3), heading 90 deg, before INIT.");
         telemetryM.addData("Motor connection", flywheel.getConnectionInfo());
         telemetryM.update();
     }
@@ -104,13 +116,25 @@ public class ShooterTest extends LinearOpMode {
         maximumLoopIntervalMs = Math.max(maximumLoopIntervalMs, loopIntervalMs);
         // Match TeleOp: both velocity controllers must see fresh feedback every loop.
         for (LynxModule hub : hubs) hub.clearBulkCache();
+        localizer.update();
+        Pose pose = localizer.pose();
+        CurrAlliance.INSTANCE.SelectGoalForY(pose.y());
+        Pose goal = CurrAlliance.INSTANCE.getCurrGoal();
+        double distanceToGoal = Math.hypot(goal.x() - pose.x(), goal.y() - pose.y());
+
+        boolean turretTogglePressed = gamepad1.a;
+        if (turretTogglePressed && !turretToggleWasPressed) {
+            turretTracking = !turretTracking;
+            if (turretTracking) Shooter.INSTANCE.start();
+            else Turret.INSTANCE.stop();
+        }
+        turretToggleWasPressed = turretTogglePressed;
 
         // Same control calls and order as TeleOpRed, using manual test shot targets.
         Shooter.INSTANCE.setAutoFlywheel(TARGET_VELOCITY_TPS);
         Shooter.INSTANCE.setAutoHood(HOOD_POSITION);
         boolean shooting = gamepad1.left_bumper;
-        // Shooter.start() activates turret aiming; leave it inactive for this test.
-        Shooter.INSTANCE.update(TEST_POSE);
+        Shooter.INSTANCE.update(pose);
         Shooter.INSTANCE.setGate(shooting);
         Rollers.INSTANCE.update(gamepad1.right_trigger, gamepad1.left_trigger,
                 Shooter.INSTANCE.getGateOpen());
@@ -125,12 +149,26 @@ public class ShooterTest extends LinearOpMode {
         // Diagnostics and current queries must not delay every velocity-control update.
         if (loopStartNs - lastTelemetryNs < TELEMETRY_INTERVAL_NS) return;
         lastTelemetryNs = loopStartNs;
-        telemetryM.addData("Test version", "Shooter Test v11");
+        double rawVoltage = Flywheel.INSTANCE.getRawBatteryVoltage();
+        double filteredVoltage = Flywheel.INSTANCE.getFilteredBatteryVoltage();
+        double flywheelPower = Shooter.INSTANCE.getShooterPow();
+        telemetryM.addData("Test version", "Shooter Test v14");
+        telemetryM.addData("Turret tracking", turretTracking);
+        telemetryM.addData("Turret angle / target (deg)", "%.2f / %.2f",
+                Encoders.INSTANCE.getTrueDegrees(),
+                Turret.INSTANCE.getTargetDegrees());
+        telemetryM.addData("Robot pose", "%.2f, %.2f, %.1f deg", pose.x(), pose.y(),
+                Math.toDegrees(pose.heading()));
+        telemetryM.addData("Distance to goal (in)", "%.2f", distanceToGoal);
         telemetryM.addData("Gate open", Shooter.INSTANCE.getGateOpen());
         telemetryM.addData("Intake power", Rollers.INSTANCE.getIntakePower());
+        telemetryM.addData("Intake velocity target (ticks/s)", Rollers.INSTANCE.getIntakeVelocityTPS());
         telemetryM.addData("Motor mode", flywheel.getMode());
         telemetryM.addData("Current velocity (ticks/s)", velocity);
         telemetryM.addData("Target velocity (ticks/s)", target);
+        telemetryM.addData("Battery raw / filtered (V)", "%.2f / %.2f",
+                rawVoltage, filteredVoltage);
+        telemetryM.addData("Flywheel motor power", flywheelPower);
         telemetryM.addData("Control interval (ms)", loopIntervalMs);
         telemetryM.addData("Max control interval since last telemetry (ms)", maximumLoopIntervalMs);
         maximumLoopIntervalMs = 0;
@@ -150,7 +188,11 @@ public class ShooterTest extends LinearOpMode {
         TelemetryPacket packet = new TelemetryPacket();
         packet.put("Target velocity (ticks/s)", target);
         packet.put("Actual velocity (ticks/s)", velocity);
+        if (Double.isFinite(rawVoltage)) packet.put("Raw battery voltage (V)", rawVoltage);
+        if (Double.isFinite(filteredVoltage)) packet.put("Filtered battery voltage (V)", filteredVoltage);
+        packet.put("Flywheel motor power", flywheelPower);
         packet.put("Intake power", Rollers.INSTANCE.getIntakePower());
+        packet.put("Intake velocity target (ticks/s)", Rollers.INSTANCE.getIntakeVelocityTPS());
         dashboard.sendTelemetryPacket(packet);
     }
 

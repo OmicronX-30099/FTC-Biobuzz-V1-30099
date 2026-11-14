@@ -8,7 +8,8 @@ It remains stopped during INIT, begins tracking after START, and stops during
 cleanup. It uses the measured pose, without SOTM lead for these stationary shots.
 The collector does not command the drivetrain. Production TeleOp and Physics
 Shooter Test retain their controls.
-Dashboard configuration remains disabled.
+There is no collector-specific Dashboard group; the collector keeps its manual
+hood and TPS controls and fixed feed power.
 
 ## Before START
 
@@ -34,23 +35,21 @@ robot is physically back at that start.
 | Right bumper | Feed while held; release after **one ball** |
 | Square, after releasing feed | Mark latest attempt **SCORE** |
 | Triangle, after releasing feed | Mark latest attempt **MISS** |
-| Left bumper | Stop shooter/feed and restore 1480 TPS / hood .300, retaining robot pose |
+| Left bumper | Stop shooter/feed and restore 1480 TPS / hood 0.300, retaining robot pose |
 | Circle | Stop shooter/feed, restore those settings, and reset starting robot pose |
 
-Holding a D-pad button does not repeat. Hood adjustments are servo-position
-increments: increasing position decreases physical hood angle and increases
-launch angle. Hood commands are bounded to physical 15–36 degrees using the
-confirmed 355-degree / 90%-PWM / 30:148 geometry. PWM is explicitly 600–2400 us.
+Holding a D-pad button does not repeat. Hood adjustments use the configured
+servo command range 0.16–0.485. PWM is explicitly 600–2400 us.
 The motor target is clipped at zero and the controller output is limited to 0–1;
 no unverified hardware maximum TPS is invented.
 
 Settings are held fixed during a feed press. Turning the shooter on while holding
-feed does not fire; release and press again. Both intake motors feed at **1100 TPS**,
-using only the left intake encoder for velocity control.
+feed does not fire; release and press again. Both intake motors feed using the
+fixed `Rollers.SHOOTING_POWER` of **0.5** while the right bumper is held.
 
 ## Collecting useful samples
 
-1. Start near the 51.43-inch known shot, with hood .300 and target 1480 TPS.
+1. Start near 51.43 inches with hood 0.300 and target 1480 TPS.
 2. Let the displayed turret angle converge to its target. Press Cross and wait
    for **Settled = true**: measured motor velocity must remain
    within 20 TPS of the target for at least 150 ms, with hood settings unchanged.
@@ -91,7 +90,9 @@ adb pull /sdcard/FIRST/settings/shooter-calibration-<session>.csv
 ```
 
 The CSV contains units in its headers, motor-encoder TPS without a gearing
-conversion, the 104 cm goal height, PWM limits, and operator outcome. Serialization
+conversion, the 104 cm goal height, PWM limits, and operator outcome. Use
+`hood_servo` when recalibrating. The `hood_degrees` column uses the old linkage
+geometry and records `NaN` outside that mapping. Serialization
 and disk writing run after motors stop in cleanup; formatting and file I/O do not
 run in the control loop. Until normal STOP, records are buffered in memory and
 will be lost if the app/device is forcibly killed. Telemetry reports write failures.

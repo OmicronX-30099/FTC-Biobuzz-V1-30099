@@ -16,7 +16,7 @@ the Control Hub; desktop tests cannot certify a hardware loop period.
 - Flywheel and turret retain the last motor command and skip exact duplicates.
   Small velocity/position feedback corrections still go through unchanged.
 - Hood commands smaller than 0.001 servo units accumulate against the last
-  command before another write. Commands remain clipped to 0.16–0.485.
+  command before another write. Commands are clipped to the hood range in `ServoPositions`.
 - One cached Pedro pose is reused for shooter calculations and telemetry.
 - Angular compensation reuses `follower.velocity().omega`; it adds arithmetic
   only, with no extra Pinpoint read. Translation and heading prediction share

@@ -14,6 +14,8 @@ import org.firstinspires.ftc.teamcode.control.ShootingPosePrediction
 object Shooter {
     enum class Mode { NORMAL, BACKUP, AUTO}
 
+    private const val TURRET_TRANSLATION_LEAD_COMPENSATION_SECONDS = 0.1
+
     var sotmEnabled = true
         private set
 
@@ -111,26 +113,34 @@ object Shooter {
             }
         }
         shotFlightTimeSeconds = flightTime
-        val aimingPose = if (sotmEnabled) {
+        val predictedShotPose = if (sotmEnabled) {
             ShootingPosePrediction.predict(pose,
                 fieldVelocityXInchesPerSecond, fieldVelocityYInchesPerSecond,
                 angularVelocityRadiansPerSecond, flightTime)
         } else pose
-        predictedShotPose = aimingPose
+        // Give turret translation an extra 100 ms of lead without changing the
+        // calibrated projectile flight time or flywheel distance estimate.
+        val turretAimingPose = if (sotmEnabled) {
+            ShootingPosePrediction.predict(pose,
+                fieldVelocityXInchesPerSecond, fieldVelocityYInchesPerSecond,
+                angularVelocityRadiansPerSecond,
+                flightTime + TURRET_TRANSLATION_LEAD_COMPENSATION_SECONDS)
+        } else pose
+        this.predictedShotPose = predictedShotPose
         if (mode == Mode.BACKUP) {
-            shooterPow = Flywheel.updateBackup(aimingPose, shooterVelocity, velocityOffsetTPS)
+            shooterPow = Flywheel.updateBackup(predictedShotPose, shooterVelocity, velocityOffsetTPS)
             Turret.updateToDegrees(0.0, recalibrateFromAbsolute = true)
         }
         else if (mode == Mode.AUTO) {
-            shooterPow = Flywheel.updateAuto(aimingPose, shooterVelocity, autoFlywheel, autoHood)
+            shooterPow = Flywheel.updateAuto(predictedShotPose, shooterVelocity, autoFlywheel, autoHood)
             if (forceTurretZero) Turret.updateToDegrees(0.0)
-            else Turret.update(aimingPose, aimOffsetDegrees)
+            else Turret.update(turretAimingPose, aimOffsetDegrees)
         }
         else
         {
-            shooterPow = Flywheel.update(aimingPose, shooterVelocity, velocityOffsetTPS)
+            shooterPow = Flywheel.update(predictedShotPose, shooterVelocity, velocityOffsetTPS)
             if (forceTurretZero) Turret.updateToDegrees(0.0)
-            else Turret.update(aimingPose, aimOffsetDegrees)
+            else Turret.update(turretAimingPose, aimOffsetDegrees)
         }
     }
 

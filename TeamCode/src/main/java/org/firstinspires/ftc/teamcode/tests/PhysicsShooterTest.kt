@@ -105,7 +105,10 @@ class PhysicsShooterTest : LinearOpMode() {
                 // Preserve real distance: out-of-range/invalid pose must stop shooting, not clamp.
                 PhysicsShooter.calculateShot(distance, shot)
                 val adjustedTPS = if (shot.valid) velocityTrim.apply(shot.shooterVelocityTPS) else 0.0
-                val canShoot = enabled && shot.valid && (shot.feasible || allowFallback) && adjustedTPS > 0.0
+                val hoodPosition = PhysicsShooter.hoodServoPosition(shot.hoodAngleDegrees)
+                val hoodInRange = hoodPosition in ServoPositions.HOOD_MIN..ServoPositions.HOOD_MAX
+                val canShoot = enabled && shot.valid && hoodInRange &&
+                    (shot.feasible || allowFallback) && adjustedTPS > 0.0
                 val target = if (canShoot) adjustedTPS else 0.0
                 val measured = shooter.velocity
                 val power = ShooterVelocityController.calculate(target, measured,
@@ -115,8 +118,7 @@ class PhysicsShooterTest : LinearOpMode() {
                     shooter.power = power
                     lastShooterPower = power
                 }
-                val hoodPosition = PhysicsShooter.hoodServoPosition(shot.hoodAngleDegrees)
-                if (shot.valid && (lastHood.isNaN() || abs(hoodPosition-lastHood) >= 0.001)) {
+                if (shot.valid && hoodInRange && (lastHood.isNaN() || abs(hoodPosition-lastHood) >= 0.001)) {
                     hood.position = hoodPosition
                     lastHood = hoodPosition
                 }
@@ -146,6 +148,9 @@ class PhysicsShooterTest : LinearOpMode() {
                     telemetry.addData("LUT TPS / adjusted TPS", "%.1f / %.1f", shot.shooterVelocityTPS, adjustedTPS)
                     telemetry.addData("Predicted TPS / hood deg", "%.1f / %.1f", shot.shooterVelocityTPS, shot.hoodAngleDegrees)
                     telemetry.addData("Hood servo command", lastHood)
+                    if (shot.valid && !hoodInRange) {
+                        telemetry.addData("LUT hood outside configured range", hoodPosition)
+                    }
                     telemetry.addData("LUT launch / entry down (deg)", "%.1f / %.1f", shot.launchAngleDegrees, shot.entryAngleDegrees)
                     telemetry.addData("LUT preferred entry / error (deg)", "%.1f / %.1f",
                         PhysicsShooter.PREFERRED_ENTRY_DEGREES, shot.entryAngleErrorDegrees)

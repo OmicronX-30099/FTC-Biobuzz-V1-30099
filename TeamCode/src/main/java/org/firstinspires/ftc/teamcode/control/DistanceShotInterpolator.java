@@ -2,6 +2,10 @@ package org.firstinspires.ftc.teamcode.control;
 
 /** Interpolates paired, empirically calibrated TPS/servo commands, not launch angles. */
 public final class DistanceShotInterpolator {
+    /** Extra speed applied to distance-derived targets after calibration lookup. */
+    public static final double DISTANCE_VELOCITY_MULTIPLIER = 1.0;
+    public static final double VELOCITY_OFFSET = 110.0;
+
     private DistanceShotInterpolator() { }
 
     public static final class Shot {
@@ -40,17 +44,21 @@ public final class DistanceShotInterpolator {
         }
         int last = distances.length - 1;
         if (distance <= distances[0]) {
-            result.set(velocities[0], hoods[0], distance < distances[0]);
+            result.set(velocities[0] * DISTANCE_VELOCITY_MULTIPLIER + VELOCITY_OFFSET,
+                    hoods[0], distance < distances[0]);
             return true;
         }
         if (distance >= distances[last]) {
-            result.set(velocities[last], hoods[last], distance > distances[last]);
+            result.set(velocities[last] * DISTANCE_VELOCITY_MULTIPLIER + VELOCITY_OFFSET,
+                    hoods[last], distance > distances[last]);
             return true;
         }
         for (int i = 1; i <= last; i++) {
             if (distance <= distances[i]) {
                 double fraction = (distance - distances[i - 1]) / (distances[i] - distances[i - 1]);
-                result.set(velocities[i - 1] + fraction * (velocities[i] - velocities[i - 1]),
+                double velocityTPS = velocities[i - 1]
+                        + fraction * (velocities[i] - velocities[i - 1]);
+                result.set(velocityTPS * DISTANCE_VELOCITY_MULTIPLIER + VELOCITY_OFFSET,
                         hoods[i - 1] + fraction * (hoods[i] - hoods[i - 1]), false);
                 return true;
             }

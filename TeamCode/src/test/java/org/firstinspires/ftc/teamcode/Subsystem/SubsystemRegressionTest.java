@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Flywheel;
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Turret;
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders;
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance;
+import org.firstinspires.ftc.teamcode.Util.ServoPositions;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.junit.After;
 import org.junit.Test;
@@ -119,7 +120,7 @@ public class SubsystemRegressionTest {
     }
 
     @Test
-    public void fixedIntakePowersIgnoreEncoderVelocityAndPrioritizeShootingThenReverse() {
+    public void rollersPrioritizeShootingThenReverseAndRestorePowerMode() {
         TestHardware hardware = new TestHardware();
         Rollers.INSTANCE.init(hardware);
         Device left = hardware.devices.get("left_intake");
@@ -129,24 +130,32 @@ public class SubsystemRegressionTest {
         assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, left.values.get("Mode"));
         assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, right.values.get("Mode"));
         float[][] inputs = {{0.2f, 0.2f}, {0.2001f, 0}, {1, 0}, {0, 0.2001f}, {1, 1}, {0, 0}};
-        double[] powers = {0, 1, 1, -0.3, -0.3, 0};
+        double[] powers = {0, 1, 1, 0, 0, 0};
         for (int i = 0; i < inputs.length; i++) {
-            left.values.put("Velocity", i % 2 == 0 ? Double.NaN : 5000.0);
             Rollers.INSTANCE.update(inputs[i][0], inputs[i][1], false);
-            assertEquals(powers[i], left.number("Power"), 0);
-            assertEquals(powers[i], right.number("Power"), 0);
-            // Shooting feeds at fixed power regardless of either trigger or encoder feedback.
+            for (Device motor : new Device[]{left, right}) {
+                if (inputs[i][1] > 0.2f) {
+                    assertEquals(DcMotor.RunMode.RUN_USING_ENCODER, motor.values.get("Mode"));
+                    assertEquals(Rollers.REVERSE_VELOCITY_TPS, motor.number("Velocity"), 0);
+                } else {
+                    assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, motor.values.get("Mode"));
+                    assertEquals(powers[i], motor.number("Power"), 0);
+                }
+            }
             Rollers.INSTANCE.update(inputs[i][0], inputs[i][1], true);
-            assertEquals(0.5, left.number("Power"), 0);
-            assertEquals(0.5, right.number("Power"), 0);
+            for (Device motor : new Device[]{left, right}) {
+                assertEquals(DcMotor.RunMode.RUN_WITHOUT_ENCODER, motor.values.get("Mode"));
+                assertEquals(0.5, motor.number("Power"), 0);
+            }
         }
         Rollers.INSTANCE.update(0, 0, false);
         assertEquals(0, left.number("Power"), 0);
         assertEquals(0, right.number("Power"), 0);
-        Rollers.INSTANCE.update(1, 0, false);
+        Rollers.INSTANCE.update(0, 1, false);
         Rollers.INSTANCE.stop();
         assertEquals(0, left.number("Power"), 0);
         assertEquals(0, right.number("Power"), 0);
+        assertEquals(0, Rollers.INSTANCE.getIntakeVelocityTPS(), 0);
         assertEquals(0, left.calls("getVelocity"));
         assertEquals(0, right.calls("getVelocity"));
     }
@@ -291,7 +300,7 @@ public class SubsystemRegressionTest {
     }
 
     @Test
-    public void turretReseedsAtStartAndBlocksOutwardPowerBeyondTravelLimits() {
+    public void turretReseedsAtStartAndBlocksOutwardPowerPastMinus180ToPlus180Limits() {
         TestHardware hardware = new TestHardware();
         Turret.INSTANCE.init(hardware);
         Pose savedGoal = CurrAlliance.INSTANCE.getCurrGoal();
@@ -309,19 +318,20 @@ public class SubsystemRegressionTest {
             Turret.INSTANCE.start();
             CurrAlliance.INSTANCE.setCurrGoal(new Pose(10, 0));
             Device motor = hardware.devices.get("turret");
-            encoder.values.put("CurrentPosition", -1154); // less than -230 degrees
+            encoder.values.put("CurrentPosition", -1154); // less than -180 degrees
             encoder.values.put("Velocity", 3845.0);
             Turret.INSTANCE.update(new Pose(0, 0, Math.toRadians(140)));
-            assertTrue(Encoders.INSTANCE.getTrueDegrees() < -230);
-            assertEquals(0, motor.number("Power"), 0);
+            assertTrue(Encoders.INSTANCE.getTrueDegrees() < -180);
+            assertTrue(motor.number("Power") > 0); // returning inside the range is allowed
 
-            encoder.values.put("CurrentPosition", 1300); // more than +270 degrees
+            // At +181 degrees, a fast negative velocity would otherwise command farther out.
+            encoder.values.put("CurrentPosition", 870);
             encoder.values.put("Velocity", -3845.0);
-            Turret.INSTANCE.update(new Pose(0, 0, Math.toRadians(-100)));
-            assertTrue(Encoders.INSTANCE.getTrueDegrees() > 270);
+            Turret.INSTANCE.update(new Pose(0, 0, Math.PI));
+            assertTrue(Encoders.INSTANCE.getTrueDegrees() > 180);
             assertEquals(0, motor.number("Power"), 0);
             encoder.values.put("Velocity", 0.0);
-            Turret.INSTANCE.update(new Pose(0, 0, Math.toRadians(-100)));
+            Turret.INSTANCE.update(new Pose(0, 0, Math.PI));
             assertTrue(motor.number("Power") < 0); // returning inside the range is allowed
         } finally {
             Turret.INSTANCE.stop();
@@ -402,7 +412,7 @@ public class SubsystemRegressionTest {
         try {
             Flywheel.AUTO_DISTANCE_SHOT = false;
             Flywheel.TARGET_VELOCITY_TPS = 1500;
-            Flywheel.HOOD_POSITION = 0.35;
+            Flywheel.HOOD_POSITION = ServoPositions.HOOD_DEFAULT;
             Flywheel.INSTANCE.init(hardware);
             Device motor = hardware.devices.get("shooter");
             Device hood = hardware.devices.get("hood");
@@ -413,14 +423,14 @@ public class SubsystemRegressionTest {
             assertEquals(motorWrites, motor.calls("setPower"));
             assertEquals(hoodWrites, hood.calls("setPosition"));
 
-            Flywheel.HOOD_POSITION = 0.3505;
+            Flywheel.HOOD_POSITION = ServoPositions.HOOD_DEFAULT + 0.0005;
             Flywheel.INSTANCE.update(new Pose(0, 0), 1499.999);
             assertEquals(motorWrites + 1, motor.calls("setPower"));
             assertEquals(0.610003, motor.number("Power"), 1e-12);
             assertEquals(hoodWrites, hood.calls("setPosition"));
-            Flywheel.HOOD_POSITION = 0.3512;
+            Flywheel.HOOD_POSITION = ServoPositions.HOOD_DEFAULT + 0.0012;
             Flywheel.INSTANCE.update(new Pose(0, 0), 1499.999);
-            assertEquals(0.3512, hood.number("Position"), 1e-12);
+            assertEquals(Flywheel.HOOD_POSITION, hood.number("Position"), 1e-12);
             Flywheel.INSTANCE.stop();
             assertEquals(0, motor.number("Power"), 0);
 
@@ -507,37 +517,37 @@ public class SubsystemRegressionTest {
         TestHardware hardware = new TestHardware();
         try {
             Flywheel.AUTO_DISTANCE_SHOT = true;
-            Flywheel.HOOD_POSITION = 0.35;
+            Flywheel.HOOD_POSITION = ServoPositions.HOOD_DEFAULT;
             Flywheel.INSTANCE.init(hardware);
-            CurrAlliance.INSTANCE.setCur(new org.firstinspires.ftc.teamcode.Util.Alliance(0, 0, 100, 0));
+            CurrAlliance.INSTANCE.setCur(new org.firstinspires.ftc.teamcode.Util.Alliance(0, 0, 87, 0));
             CurrAlliance.INSTANCE.SwitchGoal(1);
-            Pose pose = new Pose(36.12014673281381, 0, 1.0);
+            Pose pose = new Pose(23, 0, 1.0);
             Flywheel.INSTANCE.update(pose, 1440);
-            assertEquals(1440, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
+            assertEquals(1380, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
             assertEquals(0.485, hardware.devices.get("hood").number("Position"), 1e-12);
             Flywheel.INSTANCE.update(new Pose(pose.x(), pose.y(), -2.0), 1440);
-            assertEquals(1440, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
+            assertEquals(1380, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
 
             CurrAlliance.INSTANCE.ToggleGoal();
             Flywheel.INSTANCE.update(pose, 1440);
-            assertEquals(100 - pose.x(), Flywheel.INSTANCE.getDistanceToGoalInches(), 1e-9);
+            assertEquals(87 - pose.x(), Flywheel.INSTANCE.getDistanceToGoalInches(), 1e-9);
             assertTrue(Flywheel.INSTANCE.getFlyWheelVelo() > 1540);
-            assertEquals(0.25, Flywheel.INSTANCE.getHoodPosition(), 1e-12);
+            assertEquals(ServoPositions.HOOD_MIN, Flywheel.INSTANCE.getHoodPosition(), 1e-12);
             Flywheel.INSTANCE.update(new Pose(-200, 0), 1440);
-            assertEquals(1600, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
-            assertTrue(Flywheel.INSTANCE.getShotStatus().contains("outside measured range"));
+            assertEquals(1580, Flywheel.INSTANCE.getFlyWheelVelo(), 1e-9);
+            assertTrue(Flywheel.INSTANCE.getShotClamped());
 
             Flywheel.AUTO_DISTANCE_SHOT = false;
             Flywheel.TARGET_VELOCITY_TPS = 1700;
-            Flywheel.HOOD_POSITION = 0.28;
+            Flywheel.HOOD_POSITION = 1.0;
             Flywheel.INSTANCE.update(pose, 1700);
             assertEquals(1700, Flywheel.INSTANCE.getFlyWheelVelo(), 0);
-            assertEquals(0.28, hardware.devices.get("hood").number("Position"), 1e-12);
+            assertEquals(ServoPositions.HOOD_MAX, hardware.devices.get("hood").number("Position"), 1e-12);
             Flywheel.AUTO_DISTANCE_SHOT = true;
             Flywheel.INSTANCE.update(new Pose(Double.NaN, 0), 1700);
             assertEquals(0, Flywheel.INSTANCE.getFlyWheelVelo(), 0);
             assertEquals(0, hardware.devices.get("shooter").number("Power"), 0);
-            assertEquals(0.28, hardware.devices.get("hood").number("Position"), 1e-12);
+            assertEquals(ServoPositions.HOOD_MAX, hardware.devices.get("hood").number("Position"), 1e-12);
         } finally {
             Flywheel.INSTANCE.stop();
             Flywheel.AUTO_DISTANCE_SHOT = savedAuto;
@@ -554,7 +564,7 @@ public class SubsystemRegressionTest {
         TestHardware hardware = new TestHardware();
         Shooter.INSTANCE.init(hardware);
         assertEquals(0.87, hardware.devices.get("gate").number("Position"), 0.0);
-        assertEquals(0.35, hardware.devices.get("hood").number("Position"), 0.0);
+        assertEquals(ServoPositions.HOOD_DEFAULT, hardware.devices.get("hood").number("Position"), 0.0);
         Shooter.INSTANCE.setGate(true);
         assertTrue(Shooter.INSTANCE.getGateOpen());
         assertEquals(0.75, hardware.devices.get("gate").number("Position"), 0.0);

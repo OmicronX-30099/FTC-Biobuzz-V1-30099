@@ -89,7 +89,6 @@ class TeleOpRedMode: LinearOpMode() {
         rollersInitialized = true
         Flowers.init(hardwareMap)
         Shooter.start()
-        Shooter.toggleMode(Shooter.Mode.BACKUP)
         circleWasPressed = gamepad1.circle
         crossWasPressed = gamepad1.cross
         squareWasPressed = gamepad1.square

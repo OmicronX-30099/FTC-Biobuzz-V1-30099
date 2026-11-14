@@ -8,7 +8,7 @@ the configured alliance goals and Pedro Pinpoint pod configuration for localizat
 
 ## Use on the robot
 
-To collect new empirical data without Dashboard configurables, use the separate
+To collect new empirical data without physics-model Dashboard configurables, use the separate
 [Shooter Calibration Collector](ShooterCalibrationCollector.md). It provides
 manual controller-based hood/TPS adjustment and pre-feed CSV snapshots, rather
 than asking the unvalidated physics optimizer to choose the calibration shots.
@@ -24,8 +24,8 @@ Place the robot at (8.2,7.3) inches, heading 90 degrees, before initialization o
 Circle reset. Pedro localization updates once per loop; it does not command motors.
 
 - Cross: toggle flywheel operation. The OpMode starts with the flywheel stopped.
-- Right bumper held: open the gate and feed using both intake motors at 1100 TPS,
-  with only the left intake encoder supplying feedback.
+- Right bumper held: open the gate and feed using both intake motors at the
+  fixed `Rollers.SHOOTING_POWER` of 0.5.
 - Triangle: allow/disallow the height-infeasible fallback. Default is disallowed.
 - D-pad left/right: decrease/increase velocity multiplier by 0.01 per press.
 - D-pad down/up: subtract/add 20 TPS of velocity offset per press.
@@ -43,7 +43,9 @@ describe the **unadjusted LUT shot**; they are not re-simulated after driver tri
 The hood moves to the previewed shot after START. The motor is enabled only when
 Cross is toggled on and the solution is feasible, or fallback is explicitly enabled.
 Controls act once per press. Stop closes the gate and zeros all three motors.
-No Dashboard configuration is exposed. Servo commands remain inside 0.16–0.485.
+The LUT uses the old linkage geometry, with hood commands bounded to
+`ServoPositions.HOOD_MIN`–`HOOD_MAX` (0.16–0.485). The OpMode rejects shots whose
+calculated hood command falls outside those bounds.
 The D-pad no longer controls distance. Real pose-based distances outside 35–75
 inches are reported as invalid and disable shooting; they are not clamped to a
 different shot. This remains a stationary-shot test, with no velocity lead/SOTM.
@@ -76,7 +78,7 @@ angle fields remain blank in `tools/physics_shooter/measurements.csv`.
 The experiment explicitly sets the hood PWM to **600–2400 us** so it agrees with
 the 90%-travel calculation. Using 500–2500 us would invalidate this mapping.
 The requested optimization limit remains 15–36 degrees; exactly 36 degrees is
-commanded at servo **0.16074335**, inside the allowed 0.16–0.485 servo interval.
+mapped to servo **0.16074335**, within the original 0.16–0.485 interval.
 Production TeleOp and its servo configuration are not edited by this change.
 The physics model remains provisional because effective Cd and actual launch-angle
 offset remain unmeasured; knowing the hood geometry does not identify those.

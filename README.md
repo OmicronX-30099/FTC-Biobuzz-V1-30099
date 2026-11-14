@@ -49,9 +49,9 @@ manual `TARGET_VELOCITY_TPS` and `HOOD_POSITION` settings instead. In manual mod
 set target TPS to 0 to stop the flywheel. `ShotCalibration` stores the paired
 distance/TPS/hood table. See [distance shooting calibration](doc/DistanceShooting.md)
 for data, interpolation, range limits, and tuning instructions. Shooter Test
-retains its separate manual controls. TeamCode settings are source-only;
-Dashboard configuration access is disabled for production and test OpModes.
-Edit source values and rebuild/reinstall to change them. Dashboard telemetry remains available.
+retains its separate manual controls. Settings not marked with `@Config` remain
+source-only. Annotated `Flywheel` settings remain available in Dashboard;
+shooting feed power is set by `Rollers.SHOOTING_POWER` in source.
 
 Four digital inputs `bb1`, `bb2`, `bb3`, and `bb4` each monitor one ball slot.
 `false` means blocked. TeleOp reports the number of occupied slots; when all
@@ -88,15 +88,13 @@ Edit `RedAlliance` in `Util/Alliance.kt`: `GOAL_1_X`, `GOAL_1_Y`, `GOAL_2_X`,
 and `GOAL_2_Y` use inches. Both goals can be edited independently; changing goal 1
 does not automatically mirror goal 2. `BlueAlliance` defines the equivalent blue
 settings. INIT resets selection to red goal 1.
-The turret starts tracking after START. Shooting uses a fixed half-second
-translation lead: `(x + vx * 0.5, y + vy * 0.5)`, with field velocity in inches
-per second and the robot's current heading. This predicted position drives
-turret aiming and the TPS/hood distance interpolation; it does not modify the
-localizer pose or use projectile time of flight. Goal selection still uses
-measured Y before the lead. Each press of gamepad 1 D-pad left adds 2 degrees
+TeleOp starts in Normal shooting mode with shoot-on-the-move (SOTM) on.
+The turret starts tracking after START. Press gamepad 1 Square (Xbox X) to
+toggle SOTM, which uses the estimated projectile flight time to lead the shot.
+Goal selection uses measured Y. Each press of gamepad 1 D-pad left adds 2 degrees
 of left trim; D-pad right adds 2 degrees right. Holding a button does not repeat.
 Trim accumulates, applies to either goal, resets at INIT, and respects turret
-travel limits. Telemetry shows the predicted shooting position and trim.
+travel limits. Telemetry shows the SOTM state and trim.
 Its software
 PD plus friction controller and calibration are in `TurretConfig.java`;
 the motor runs in `RUN_WITHOUT_ENCODER`. Target selection chooses the nearest
@@ -120,7 +118,8 @@ reads the motor-side analog absolute encoder `absEn`, and reads the relative
 encoder through `frDrive`, matching the existing wiring. The test does not
 command the `frDrive` motor output or reset its encoder.
 
-Before building, set the hardware/calibration fields in `tests/TurretTest.java`.
+Set the hardware and calibration fields before INIT. After editing them in the
+Dashboard `TurretTest` config group, stop and INIT again to apply them.
 Defaults are 384.5 ticks per motor revolution, a 4.5:1 reduction, 3.3 V absolute
 full scale, and reversed absolute encoder direction. Set `ABSOLUTE_ZERO_DEG`
 to the raw absolute reading with the turret facing forward. The absolute reading
@@ -130,7 +129,8 @@ INIT telemetry shows the estimated angle; START seeds the angle and relative
 tick baseline from the current readings. Subsequent angle tracking uses relative
 encoder deltas, so crossing the absolute encoder's wrap does not jump the target.
 
-Set `TARGET_DEG`, `kP`, `kD`, and `kS` in source before building. The shared controller is:
+Edit `TARGET_DEG`, `kP`, `kD`, `kS`, `MAX_POWER`, deadband, friction ramp, and
+test angle limits live in the Dashboard `TurretTest` config group. The controller uses:
 
 `power = clip((kP * error - kD * measuredVelocity + kS * sign(error) * min(abs(error) / FRICTION_RAMP_DEG, 1)) * 12 / batteryVoltage, -MAX_POWER, MAX_POWER)`
 
@@ -141,8 +141,9 @@ The completed gains are `kP = 0.04`, `kD = 0.00125`, `kS = 0.05`, with
 `ABSOLUTE_ZERO_DEG = 0`, `DEADBAND_DEG = 0.21`, and `FRICTION_RAMP_DEG = 5`.
 `MAX_POWER` is 1.0; target limits are -230 through +270 degrees.
 The test loads its defaults from `TurretConfig` and uses the same encoder tracker
-and controller as the robot. Source settings under `TurretTest` apply to the test;
-edits under `TurretConfig` apply to the robot. Verify that positive motor
+and controller as the robot. `TurretTest` settings can narrow the test limits,
+but cannot extend them past -230 through +270 degrees; edits under `TurretConfig` apply to
+the robot. Verify that positive motor
 power increases the reported turret angle; motor and relative encoder reversal
 are independent calibration settings. Telemetry includes raw absolute voltage
 and motor angle, relative ticks, tracked turret angle/velocity, target/error,
@@ -174,18 +175,22 @@ motors and measure their velocities before tuning the velocity controller.
 uses different names. This test follows the direct `init()`/`loop()` structure of
 [16010-Worlds' testing OpModes](https://github.com/BaronClaps/16010-Worlds/tree/7ba5437c9a6f1892af06132384047ef8490efe1d/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/test).
 
-Set `HOOD_POSITION` (0.16–0.485) in source, then build, INIT and START.
+INIT and START the OpMode, then set `HOOD_POSITION` (0.16–0.485) in the
+Dashboard `ShooterTest` config group.
 Shooter Test always uses software velocity control;
 there is no mode selector or flywheel enable toggle. The separate
 `Shooter Motor Power Test` OpMode provides direct motor-power testing.
+Place the robot at `(8.2, 7.3)` inches, heading 90 degrees, before INIT so the
+Pinpoint pose starts correctly. Press gamepad 1 A to toggle turret goal tracking;
+the selected goal follows robot Y. Turret tracking is off by default.
 
-Set `TARGET_VELOCITY_TPS` (defaults to 1500 ticks/s) and tune `kP`, `kS`, and `kV`
-in source before building. The calculation is ported from [FTC-Decode-v3's Flywheel.calculatePow()](https://github.com/OmicronX-30099/FTC-Decode-v3/blob/f68882b17f6c3be14384867a75702066da4f1bb2/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Systems/Shooter/ShooterUtil.kt):
+Set `TARGET_VELOCITY_TPS` (defaults to 1500 ticks/s) under `ShooterTest`.
+Flywheel gains are fixed by `DEFAULT_KP`, `DEFAULT_KS`, and `DEFAULT_KV` in
+`Flywheel.kt`. The calculation is ported from [FTC-Decode-v3's Flywheel.calculatePow()](https://github.com/OmicronX-30099/FTC-Decode-v3/blob/f68882b17f6c3be14384867a75702066da4f1bb2/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Systems/Shooter/ShooterUtil.kt):
 
 `power = clip(kP * (targetTPS - measuredTPS) + kV * targetTPS + kS * sign(targetTPS), 0, 1)`
 
-Starting gains are `kP = 0.003`, `kS = 0.09`, and `kV = 0.0004`, as in last
-season's controller. INIT uses the source-defined settings. These gains are in
+Starting gains are `kP = 0.003`, `kS = 0.04`, and `kV = 0.00038`. These gains are in
 motor-power units and differ from REV Hub PIDF gains. `RUN_WITHOUT_ENCODER`
 allows direct `setPower()` output while `getVelocity()` still reads the encoder.
 A connected encoder is required. The controller lives in
@@ -225,9 +230,9 @@ Measured positions are stored in `Util/ServoPositions.kt`:
 
 | Servo | Position | Value |
 | --- | --- | --- |
-| Hood | Default | 0.35 |
-| Hood | 15 degrees (recorded calibration) | 0.485 |
-| Hood | Maximum | 0.16 |
+| Hood | Default servo position | 0.35 |
+| Hood | Minimum servo position / 36 degrees | 0.16 |
+| Hood | Maximum servo position / 15 degrees | 0.485 |
 | Gate | Closed (default) | 0.87 |
 | Gate | Open for shooting | 0.75 |
 | Left flower | Down / Up | 0.5 / 0.83 |
@@ -238,41 +243,29 @@ Measured positions are stored in `Util/ServoPositions.kt`:
 left flower. Only `left_flower` is currently used to operate the flower intake;
 `right_flower` is not initialized or commanded, and its calibration is retained.
 Each press of gamepad 1's right bumper toggles the left flower: first down, then up.
-Holding the bumper does not repeatedly toggle it. Gamepad 1's left bumper
-holds the shooting gate open at 0.75; releasing it closes the gate at 0.87 on the
-next control loop, with no timed sequence. STOP also closes the gate.
-The intake targets -2000 ticks/s when gamepad 1's left trigger is greater than
-0.2; otherwise, the right trigger above 0.2 requests 2800 ticks/s, and releasing
-both triggers requests 0. Opening the gate with the left bumper overrides either
-trigger with 1100 ticks/s by default, even with both triggers released. Change
-`Rollers.GATE_OPEN_TPS` in source to adjust this target before building. Both intake motors receive
-the same controller output, calculated from the left encoder. Telemetry reports
-the target, measured intake velocity and output power.
+Holding the bumper does not repeatedly toggle it. Holding gamepad 1's left
+bumper opens the shooting gate and feeds at the configured shooting power.
+Releasing it closes the gate at 0.87 on the next control loop. STOP also closes
+the gate.
+The intake reverses at -800 ticks/s when gamepad 1's left trigger is above 0.2.
+Otherwise, the right trigger above 0.2 runs the intake at full power. Releasing
+both triggers stops the intake. Holding the left bumper overrides either trigger
+and runs both motors at `Rollers.SHOOTING_POWER` (0.5).
 With `Flywheel.AUTO_DISTANCE_SHOT = false`, change `Flywheel.HOOD_POSITION`
 in source to configure the manual hood position (0.16–0.485). In auto mode, hood position follows
 the distance calibration instead.
-INIT preserves that setting; telemetry shows the commanded position. Values
-outside 0.16–0.485 are clipped to the calibrated maximum/15-degree hood positions,
-and non-finite live edits are ignored. Shooter test modes use the same limits and default their
-hood position to 0.35.
+INIT preserves that setting and telemetry shows the commanded position. Hood commands
+are clipped to the bounds in `ServoPositions`. Non-finite live edits are ignored.
 
 ### Servo test
 
-Before building, open `tests/ServoTest.java` and set `SERVO_NAME` and `SERVO_NAME_2`
-to the two positional servos' robot configuration names. Select `Servo Test`
-in the Tests group and press INIT. The first name defaults to `hood`; the
-second defaults to blank. Leave either name blank to disable that slot. The
-selections update during INIT; telemetry shows each selected name and connection
-or reports that the name was not found. If both names select the same servo,
-only the first slot commands it.
-
-Set `POSITION` and `POSITION_2` independently from 0 to 1 in source before building,
-then press START. `REVERSED` and `REVERSED_2` configure each servo's direction.
-Positions outside 0–1 are clipped; non-finite values are
-ignored. No position is commanded before START. To select another servo after
-START, stop and press INIT again. Telemetry appears on Driver Station and
-Dashboard and reports commanded position, not physical feedback. This test is
-for positional servos, not continuous-rotation servos.
+Select `Servo Test` in the Tests group and press INIT. The Dashboard `ServoTest`
+group controls one positional servo: `SERVO_NAME` (default `left_flower`),
+`POSITION` (default 0.78), and `REVERSED`. Changes to the name, position, and
+direction apply live while the OpMode is running. Position is clipped to 0–1;
+non-finite edits are ignored. No position is commanded before START. Telemetry
+reports the selected servo and commanded position, not physical feedback. This
+test is for positional servos, not continuous-rotation servos.
 
 ## NOTICE
 

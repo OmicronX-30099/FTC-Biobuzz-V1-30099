@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.tests;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -15,6 +16,7 @@ import org.firstinspires.ftc.teamcode.control.TurretEncoderTracker;
 import org.firstinspires.ftc.teamcode.Subsystem.Turret.TurretConfig;
 
 /** Motor turret tuning using the existing absEn and frDrive encoder wiring. */
+@Config
 @TeleOp(name = "Turret Test", group = "Tests")
 public class TurretTest extends OpMode {
     // Hardware/calibration settings are captured at INIT; restart INIT after changing them.
@@ -32,7 +34,7 @@ public class TurretTest extends OpMode {
     // Enter an approximate starting turret angle to select the correct revolution.
     public static double INITIAL_TURRET_ESTIMATE_DEG = TurretConfig.INITIAL_TURRET_ESTIMATE_DEG;
 
-    // Source-defined settings. Gains are motor-power units, not REV Hub PIDF gains.
+    // Live Dashboard settings. Gains are expressed in motor power units.
     public static volatile double TARGET_DEG = 0.0;
     public static volatile double kP = TurretConfig.kP;
     public static volatile double kD = TurretConfig.kD;
@@ -100,7 +102,7 @@ public class TurretTest extends OpMode {
 
     private void showInitTelemetry() {
         readAbsoluteEncoder();
-        telemetry.addLine("Press START to run TARGET_DEG and gains configured in TurretTest.java.");
+        telemetry.addLine("Dashboard: edit TARGET_DEG and gains live in the TurretTest config group.");
         telemetry.addLine("Motor-side absolute repeats every 80 turret degrees; check the initial estimate.");
         telemetry.addData("Absolute voltage (V)", absoluteVoltage);
         telemetry.addData("Raw absolute motor angle (deg)", absoluteDegrees);
@@ -125,8 +127,8 @@ public class TurretTest extends OpMode {
         double angle = tracker.positionDegrees(ticks);
         double velocity = tracker.velocityDegreesPerSecond(relativeEncoder.getVelocity());
         double voltage = battery == null ? 12.0 : battery.getVoltage();
-        double minAngle = MIN_ANGLE_DEG;
-        double maxAngle = MAX_ANGLE_DEG;
+        double minAngle = Math.max(TurretConfig.MIN_ANGLE_DEG, MIN_ANGLE_DEG);
+        double maxAngle = Math.min(TurretConfig.MAX_ANGLE_DEG, MAX_ANGLE_DEG);
         boolean validLimits = Double.isFinite(minAngle) && Double.isFinite(maxAngle) && minAngle < maxAngle;
         double requestedTarget = TARGET_DEG;
         double target = validLimits ? Math.max(minAngle, Math.min(maxAngle, requestedTarget)) : angle;

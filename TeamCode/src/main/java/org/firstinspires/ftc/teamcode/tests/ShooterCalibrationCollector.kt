@@ -61,7 +61,7 @@ class ShooterCalibrationCollector : LinearOpMode() {
             Turret.init(hardwareMap)
             turretInitialized = true
             telemetry.msTransmissionInterval = 200
-            telemetry.addLine("MANUAL: 1480 TPS / hood .300. No LUT or peak-height restriction.")
+            telemetry.addData("Manual start (TPS / hood)", "%.0f / %.3f", settings.targetTPS, settings.hoodPosition)
             telemetry.addLine("D-pad Up/Down: +/-20 TPS. Right/Left: +/-0.005 hood servo.")
             telemetry.addLine("Cross: spin. RB: feed ONE ball per press; release after firing.")
             telemetry.addLine("After release: Square=SCORE, Triangle=MISS for latest attempt.")
@@ -175,7 +175,7 @@ class ShooterCalibrationCollector : LinearOpMode() {
                     telemetry.addData("Configured TPS", settings.targetTPS)
                     telemetry.addData("Turret angle / target (deg)", "%.2f / %.2f",
                         Encoders.trueDegrees, Turret.targetDegrees)
-                    telemetry.addData("Hood servo / degrees", "%.4f / %.2f", hoodCommand,
+                    telemetry.addData("Hood servo / legacy degrees", "%.4f / %.2f", hoodCommand,
                         PhysicsShooter.hoodDegreesFromServoPosition(hoodCommand))
                     telemetry.addData("Settled (within 20 TPS for 150 ms)", settled)
                     telemetry.addData("Attempts / scores / misses / unrated", "%d / %d / %d / %d",

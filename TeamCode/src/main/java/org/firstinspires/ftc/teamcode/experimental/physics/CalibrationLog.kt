@@ -19,11 +19,11 @@ class CalibrationLog {
     fun capture(timeSeconds: Double, robotX: Double, robotY: Double, headingRad: Double,
                 goal: Int, goalX: Double, goalY: Double, targetTPS: Double,
                 measuredTPS: Double, hoodPosition: Double, settled: Boolean): Boolean {
-        val hoodDegrees = PhysicsShooter.hoodDegreesFromServoPosition(hoodPosition)
         val distance = hypot(goalX-robotX, goalY-robotY)
         val values = doubleArrayOf(timeSeconds, robotX, robotY, headingRad, goalX, goalY,
-            distance, targetTPS, measuredTPS, hoodPosition, hoodDegrees)
-        if (values.any { !it.isFinite() } || distance <= 0 || targetTPS <= 0 || goal !in 1..2)
+            distance, targetTPS, measuredTPS, hoodPosition)
+        if (values.any { !it.isFinite() } || distance <= 0 || targetTPS <= 0 ||
+            goal !in 1..2 || hoodPosition !in 0.0..1.0)
             return false
         attempts.add(Attempt(values, goal, settled))
         return true
@@ -45,7 +45,9 @@ class CalibrationLog {
             text.append(i+1).append(',')
             for (j in 0..3) text.append(String.format(Locale.US, "%.6f,", v[j]))
             text.append(attempt.goal).append(',')
-            for (j in 4..10) text.append(String.format(Locale.US, "%.6f,", v[j]))
+            for (j in 4..9) text.append(String.format(Locale.US, "%.6f,", v[j]))
+            val hoodDegrees = PhysicsShooter.hoodDegreesFromServoPosition(v[9])
+            text.append(String.format(Locale.US, "%.6f,", hoodDegrees))
             text.append(attempt.settled).append(',').append(attempt.result).append(',')
                 .append(String.format(Locale.US, "%.1f,%.1f,%.1f\n",
                     PhysicsShooter.TARGET_HEIGHT_CM, PhysicsShooter.PWM_MIN_US, PhysicsShooter.PWM_MAX_US))

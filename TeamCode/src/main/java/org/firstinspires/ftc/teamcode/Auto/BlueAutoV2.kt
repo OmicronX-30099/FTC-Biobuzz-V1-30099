@@ -219,7 +219,7 @@ class BlueAutoV2 : OpMode() {
     private val shoottopflower = poseFactory.of(107.5, 11.5, 270.0)
     private val shoottopflowerControl1 = poseFactory.of(107.5, 41.5, 180.0)
     private val intakesideflowerpart1 = poseFactory.of(107.5, 93.7, 270.0)
-    private val intakesideflowerpart2 = poseFactory.of(127.5, 93.7, 0.0)
+    private val intakesideflowerpart2 = poseFactory.of(127.0, 93.7, 0.0)
     private val shootsideflowerpart1 = poseFactory.of(111.5, 93.7, 0.0)
     private val shootsideflowerpart2 = poseFactory.of(107.5, 11.5, 270.0)
     private val park = poseFactory.of(131.5, 26.5, 270.0)

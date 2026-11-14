@@ -34,14 +34,14 @@ object Turret {
         battery = hardwareMap.voltageSensor.firstOrNull()
         batteryVoltage = 12.0
         lastBatteryReadNanos = 0L
-        targetDegrees = Encoders.trueDegrees
+        targetDegrees = limitedTargetDegrees(Encoders.trueDegrees)
         motorPower = 0.0
     }
 
     fun start() {
         // Re-seed after INIT in case the turret was moved before START.
         Encoders.seedAtCurrentPosition()
-        targetDegrees = Encoders.trueDegrees
+        targetDegrees = limitedTargetDegrees(Encoders.trueDegrees)
         active = true
     }
 
@@ -86,7 +86,7 @@ object Turret {
     }
 
     private fun updateMotor(target: Double, current: Double) {
-        targetDegrees = target
+        targetDegrees = limitedTargetDegrees(target)
         var power = TurretPositionController.calculate(
             targetDegrees, current, Encoders.velocityDegreesPerSecond,
             TurretConfig.kP, TurretConfig.kD, TurretConfig.kS,
@@ -99,6 +99,10 @@ object Turret {
         if (power != motorPower) turret.power = power
         motorPower = power
     }
+
+    private fun limitedTargetDegrees(target: Double): Double =
+        if (target.isFinite()) target.coerceIn(TurretConfig.MIN_ANGLE_DEG, TurretConfig.MAX_ANGLE_DEG)
+        else target
 
     fun stop() {
         active = false
