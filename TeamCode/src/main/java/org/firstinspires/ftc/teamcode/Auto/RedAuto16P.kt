@@ -8,10 +8,13 @@ import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.Scheduler.schedule
 import com.pedropathing.ivy.commands.Commands.instant
 import com.pedropathing.ivy.commands.Commands.waitMs
+import com.pedropathing.ivy.commands.Commands.waitUntil
 import com.pedropathing.ivy.groups.Groups.parallel
+import com.pedropathing.ivy.groups.Groups.race
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
 import com.pedropathing.ivy.pedro.PedroCommands.hold
+import com.pedropathing.math.Pose
 import com.pedropathing.paths.Path
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
@@ -25,6 +28,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Turret.Encoders
 import org.firstinspires.ftc.teamcode.Util.CurrAlliance
 import org.firstinspires.ftc.teamcode.OpModeStorage
 import org.firstinspires.ftc.teamcode.pedro.Constants
+import kotlin.math.hypot
 
 @Autonomous(name = "Red Auto Test", group = "Red")
 class RedAuto16P: OpMode()  {
@@ -34,6 +38,8 @@ class RedAuto16P: OpMode()  {
     private lateinit var originalHubCachingModes: List<LynxModule.BulkCachingMode>
     private var shooterInitialized = false
     private var rollersInitialized = false
+    private var bufferingPose = false
+    private var endingPath = false
     private var autoShooting = false
     private var autoIntaking = false
     private var mechanismUpdatesEnabled = false
@@ -70,7 +76,13 @@ class RedAuto16P: OpMode()  {
             follow(follower, path2()),
             setIntaking(false),
             follow(follower, Paths.path(path3(), path4())),
-            parallel(instant { Flowers.setDown(true) }, follow(follower, openPollenIntake())),
+
+            parallel(instant { Flowers.setDown(true) },
+                race(
+                    follow(follower, openPollenIntake()),
+                    watchForStall(2)
+                )
+            ),
             waitMs(500.0),
             shootForOneSecond(),
             setIntaking(true),
@@ -84,7 +96,11 @@ class RedAuto16P: OpMode()  {
             follow(follower, path8()),
             follow(follower, path9()),
             follow(follower, path10()),
-            parallel(setIntaking(true), follow(follower, openPollenIntake2())),
+            parallel(setIntaking(true),
+                race (
+                    follow(follower, openPollenIntake2())),
+                    watchForStall(2)
+                ),
             hold(follower, openPollenIntake2),
             waitMs(1000.0),
             setIntaking(false),
@@ -171,6 +187,51 @@ class RedAuto16P: OpMode()  {
         waitMs(1000.0),
         instant { autoShooting = false }
     )
+
+    private fun watchForStall(waitSec: Int): Command {
+        val wait = waitSec.toLong() * 1_000_000_000L
+        var lastX = 0.0
+        var lastY = 0.0
+        var lastProgressNanos = 0L
+        var wasNearEndpoint = false
+
+        return sequential(
+            instant {
+                val pose = follower.pose()
+                lastX = pose.x()
+                lastY = pose.y()
+                lastProgressNanos = System.nanoTime()
+                wasNearEndpoint = false
+            },
+            waitUntil {
+                val now = System.nanoTime()
+                val pose = follower.pose()
+                val nearEndpoint = follower.distanceToEndpoint() < 10.0
+
+                if (!nearEndpoint) {
+                    // Only watch for a stall once we're near the target.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                    wasNearEndpoint = false
+                } else if (!wasNearEndpoint) {
+                    // Start the two-second timer when we enter the target area.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                    wasNearEndpoint = true
+                } else if (hypot(pose.x() - lastX, pose.y() - lastY) >= 1.0) {
+                    // Movement of at least 1 inch counts as progress.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                }
+
+                wasNearEndpoint &&
+                        now - lastProgressNanos >= wait
+            }
+        )
+    }
 
     private fun setIntaking(active: Boolean): Command = instant {
         autoIntaking = active

@@ -7,7 +7,9 @@ import com.pedropathing.ivy.Command
 import com.pedropathing.ivy.Scheduler
 import com.pedropathing.ivy.commands.Commands.instant
 import com.pedropathing.ivy.commands.Commands.waitMs
+import com.pedropathing.ivy.commands.Commands.waitUntil
 import com.pedropathing.ivy.groups.Groups.parallel
+import com.pedropathing.ivy.groups.Groups.race
 import com.pedropathing.ivy.groups.Groups.sequential
 import com.pedropathing.ivy.pedro.PedroCommands.follow
 import com.pedropathing.ivy.pedro.PedroCommands.hold
@@ -86,7 +88,10 @@ class RedAutoV2 : OpMode() {
             shootFor(300.0),
             // All remaining shots are also at (34, 130); retain the far-corner target.
             setIntaking(true),
-            followWithFlowers(intaketopflower(), down = true),
+            race(
+                followWithFlowers(intaketopflower(), down = true),
+                watchForStall(2)
+            ),
             hold(follower, intaketopflower),
             waitMs(1000.0),
             setIntaking(false),
@@ -95,7 +100,10 @@ class RedAutoV2 : OpMode() {
             shootFor(1200.0),
             follow(follower, intakesideflowerpart1()),
             setIntaking(true),
-            followWithFlowers(intakesideflowerpart2(), down = true),
+            race(
+                followWithFlowers(intakesideflowerpart2(), down = true),
+                watchForStall(2)
+            ),
             hold(follower, intakesideflowerpart2),
             waitMs(1000.0),
             setIntaking(false),
@@ -201,6 +209,51 @@ class RedAutoV2 : OpMode() {
         if (turretParkStarted) Turret.parkAtZero()
         Rollers.stop()
         mechanismsEnabled = false
+    }
+
+    private fun watchForStall(waitSec: Int): Command {
+        val wait = waitSec.toLong() * 1_000_000_000L
+        var lastX = 0.0
+        var lastY = 0.0
+        var lastProgressNanos = 0L
+        var wasNearEndpoint = false
+
+        return sequential(
+            instant {
+                val pose = follower.pose()
+                lastX = pose.x()
+                lastY = pose.y()
+                lastProgressNanos = System.nanoTime()
+                wasNearEndpoint = false
+            },
+            waitUntil {
+                val now = System.nanoTime()
+                val pose = follower.pose()
+                val nearEndpoint = follower.distanceToEndpoint() < 10.0
+
+                if (!nearEndpoint) {
+                    // Only watch for a stall once we're near the target.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                    wasNearEndpoint = false
+                } else if (!wasNearEndpoint) {
+                    // Start the two-second timer when we enter the target area.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                    wasNearEndpoint = true
+                } else if (hypot(pose.x() - lastX, pose.y() - lastY) >= 1.0) {
+                    // Movement of at least 1 inch counts as progress.
+                    lastX = pose.x()
+                    lastY = pose.y()
+                    lastProgressNanos = now
+                }
+
+                wasNearEndpoint &&
+                        now - lastProgressNanos >= wait
+            }
+        )
     }
 
     private val poseFactory = PoseFactory.degrees()
